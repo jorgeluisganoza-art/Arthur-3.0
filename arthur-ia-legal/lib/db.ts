@@ -6,13 +6,15 @@ let _db: Database.Database | null = null;
 
 function getDb(): Database.Database {
   if (!_db) {
-    const dbPath = process.env.DB_PATH || './data/arthur.db';
-    const resolvedPath = path.resolve(process.cwd(), dbPath);
-    const dataDir = path.dirname(resolvedPath);
+    const isVercel = !!process.env.VERCEL;
+    const dbPath = isVercel
+      ? '/tmp/arthur.db'
+      : path.resolve(process.cwd(), process.env.DB_PATH || './data/arthur.db');
+    const dataDir = path.dirname(dbPath);
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
-    _db = new Database(resolvedPath);
+    _db = new Database(dbPath);
     _db.pragma('journal_mode = WAL');
     _db.pragma('foreign_keys = ON');
     initSchema(_db);
