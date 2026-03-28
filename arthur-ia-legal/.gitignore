@@ -33,7 +33,7 @@ yarn-error.log*
 .env.local
 
 # sqlite db
-/data/*.db
+/data/
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)

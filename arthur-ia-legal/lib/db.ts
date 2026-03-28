@@ -2,19 +2,16 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-const DB_PATH = process.env.DB_PATH || './data/arthur.db';
-const resolvedPath = path.resolve(process.cwd(), DB_PATH);
-
-// Ensure the data directory exists
-const dataDir = path.dirname(resolvedPath);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
 let _db: Database.Database | null = null;
 
 function getDb(): Database.Database {
   if (!_db) {
+    const dbPath = process.env.DB_PATH || './data/arthur.db';
+    const resolvedPath = path.resolve(process.cwd(), dbPath);
+    const dataDir = path.dirname(resolvedPath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
     _db = new Database(resolvedPath);
     _db.pragma('journal_mode = WAL');
     _db.pragma('foreign_keys = ON');
