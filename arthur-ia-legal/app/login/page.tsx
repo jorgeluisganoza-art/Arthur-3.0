@@ -42,15 +42,17 @@ export default function LoginPage() {
     }
   }
 
+  const green = '#1a3d2b';
+
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '14px 16px',
-    background: 'rgba(10,46,60,0.06)',
-    border: '1px solid rgba(10,46,60,0.15)',
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.15)',
     borderRadius: 0,
     fontFamily: 'Inter, sans-serif',
     fontSize: '14px',
-    color: '#0a2e3c',
+    color: '#ffffff',
     outline: 'none',
     transition: 'border-color 0.2s',
     marginBottom: '16px',
@@ -62,7 +64,7 @@ export default function LoginPage() {
     fontSize: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
-    color: 'rgba(10,46,60,0.5)',
+    color: 'rgba(255,255,255,0.5)',
     marginBottom: '8px',
     display: 'block',
   };
@@ -86,13 +88,13 @@ export default function LoginPage() {
           style={{
             width: '420px',
             maxWidth: '90vw',
-            background: 'rgba(245, 240, 235, 0.85)',
+            background: 'rgba(15, 45, 30, 0.75)',
             backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(10,46,60,0.12)',
+            border: '1px solid rgba(255,255,255,0.1)',
             padding: '48px 40px',
             borderRadius: 0,
             animation: 'fadeUp 0.6s ease forwards',
-            boxShadow: '0 8px 32px rgba(10,46,60,0.08)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
           }}
         >
           <button
@@ -101,7 +103,7 @@ export default function LoginPage() {
               fontFamily: 'DM Mono, monospace',
               fontSize: '10px',
               textTransform: 'uppercase',
-              color: 'rgba(10,46,60,0.4)',
+              color: 'rgba(255,255,255,0.4)',
               background: 'none',
               border: 'none',
               cursor: 'pointer',
@@ -110,8 +112,8 @@ export default function LoginPage() {
               display: 'block',
               transition: 'color 0.15s',
             }}
-            onMouseOver={e => { e.currentTarget.style.color = 'rgba(10,46,60,0.7)'; }}
-            onMouseOut={e => { e.currentTarget.style.color = 'rgba(10,46,60,0.4)'; }}
+            onMouseOver={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+            onMouseOut={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
           >
             &larr; Volver
           </button>
@@ -121,7 +123,7 @@ export default function LoginPage() {
               fontFamily: 'DM Serif Display, serif',
               fontStyle: 'italic',
               fontSize: '36px',
-              color: '#0a2e3c',
+              color: '#ffffff',
               lineHeight: 1,
               marginBottom: '12px',
             }}
@@ -132,7 +134,7 @@ export default function LoginPage() {
             style={{
               width: '40px',
               height: '1px',
-              background: 'rgba(10,46,60,0.2)',
+              background: 'rgba(255,255,255,0.2)',
               marginBottom: '32px',
             }}
           />
@@ -143,7 +145,7 @@ export default function LoginPage() {
               fontSize: '11px',
               textTransform: 'uppercase',
               letterSpacing: '0.15em',
-              color: 'rgba(10,46,60,0.45)',
+              color: 'rgba(255,255,255,0.45)',
               marginBottom: '32px',
             }}
           >
@@ -159,8 +161,8 @@ export default function LoginPage() {
               onChange={e => setEmail(e.target.value)}
               required
               style={inputStyle}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(10,46,60,0.4)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,60,0.15)'; }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
             />
 
             <label style={labelStyle}>C&oacute;digo de acceso</label>
@@ -171,8 +173,8 @@ export default function LoginPage() {
               onChange={e => setCode(e.target.value)}
               required
               style={inputStyle}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(10,46,60,0.4)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,60,0.15)'; }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
             />
 
             {error && (
@@ -180,7 +182,7 @@ export default function LoginPage() {
                 style={{
                   fontFamily: 'DM Mono, monospace',
                   fontSize: '11px',
-                  color: 'rgba(200,50,50,0.9)',
+                  color: 'rgba(255,100,100,0.9)',
                   marginBottom: '12px',
                 }}
               >
@@ -194,10 +196,10 @@ export default function LoginPage() {
               style={{
                 width: '100%',
                 padding: '16px',
-                background: loading ? 'rgba(10,46,60,0.06)' : '#0a2e3c',
-                border: '1px solid rgba(10,46,60,0.25)',
+                background: loading ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)',
+                border: '1px solid rgba(255,255,255,0.25)',
                 borderRadius: 0,
-                color: loading ? 'rgba(10,46,60,0.5)' : '#f5f0eb',
+                color: loading ? 'rgba(255,255,255,0.5)' : '#ffffff',
                 fontFamily: 'DM Mono, monospace',
                 fontSize: '12px',
                 textTransform: 'uppercase',
@@ -208,10 +210,10 @@ export default function LoginPage() {
                 boxSizing: 'border-box',
               }}
               onMouseOver={e => {
-                if (!loading) e.currentTarget.style.background = '#0d3a4a';
+                if (!loading) e.currentTarget.style.background = 'rgba(255,255,255,0.22)';
               }}
               onMouseOut={e => {
-                e.currentTarget.style.background = loading ? 'rgba(10,46,60,0.06)' : '#0a2e3c';
+                e.currentTarget.style.background = loading ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)';
               }}
             >
               {loading ? 'Verificando...' : 'Entrar'}
