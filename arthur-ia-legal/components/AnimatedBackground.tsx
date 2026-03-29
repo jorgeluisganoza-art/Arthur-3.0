@@ -91,18 +91,18 @@ void main() {
   float n = domainWarp(coord, uTime * 0.09);
   n = (n + 1.0) * 0.5;
 
-  float dotScale = mix(28.0, 48.0, smoothstep(0.0, 1.0, uResolution.x / 1920.0));
+  float dotScale = mix(12.0, 20.0, smoothstep(0.0, 1.0, uResolution.x / 1920.0));
   vec2 dotUV = gl_FragCoord.xy / dotScale;
   vec2 local = fract(dotUV) - 0.5;
 
   float dist = length(local);
-  float radius = n * 0.28;
-  float dot = 1.0 - smoothstep(radius - 0.02, radius + 0.03, dist);
+  float radius = n * 0.15;
+  float dot = 1.0 - smoothstep(radius - 0.01, radius + 0.02, dist);
 
   vec3 bgColor  = vec3(0.04, 0.12, 0.08);
-  vec3 dotColor = vec3(0.22, 0.38, 0.28);
+  vec3 dotColor = vec3(0.12, 0.22, 0.16);
 
-  dotColor = mix(dotColor, vec3(0.30, 0.50, 0.36), n * 0.3);
+  dotColor = mix(dotColor, vec3(0.18, 0.30, 0.22), n * 0.25);
 
   vec3 color = mix(bgColor, dotColor, dot);
 
