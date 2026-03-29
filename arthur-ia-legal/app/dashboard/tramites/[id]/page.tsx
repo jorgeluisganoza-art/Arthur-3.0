@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
+import CalendarButtons from '@/components/CalendarButtons';
 
 interface Tramite {
   id: number;
@@ -391,9 +392,14 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
                     <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: 600, color: 'var(--ink)', marginBottom: '4px' }}>
                       {plazo.descripcion}
                     </div>
-                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--muted)' }}>
+                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--muted)', marginBottom: '6px' }}>
                       {formatDate(plazo.fecha_vencimiento)}
                     </div>
+                    <CalendarButtons
+                      title={`${plazo.descripcion} — ${tramite.alias}`}
+                      date={plazo.fecha_vencimiento}
+                      description={`Trámite: ${tramite.alias}\nTítulo: ${tramite.numero_titulo}-${tramite.anio}`}
+                    />
                   </div>
                 </div>
               );

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import CalendarButtons from '@/components/CalendarButtons';
 
 interface Plazo {
   id: number;
@@ -188,7 +189,14 @@ export default function AgendaPage() {
                           <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px' }}>
                             {formatDate(plazo.fecha_vencimiento)}
                           </div>
-                          {getTipoPill(plazo.tipo)}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '6px' }}>
+                            {getTipoPill(plazo.tipo)}
+                            <CalendarButtons
+                              title={`${plazo.descripcion} — ${plazo.alias || ''}`}
+                              date={plazo.fecha_vencimiento}
+                              description={`Trámite: ${plazo.alias || ''}\nTipo: ${plazo.tipo || 'General'}`}
+                            />
+                          </div>
                         </div>
                       </Link>
                     );
