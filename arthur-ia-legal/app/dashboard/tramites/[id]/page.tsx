@@ -623,9 +623,24 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
             {tramite.observacion_texto}
           </p>
           {(tramite.estado_actual === 'SIN DATOS' || (tramite.observacion_texto && /no existe el titulo/i.test(tramite.observacion_texto))) && (
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', lineHeight: 1.6, color: 'var(--muted)', margin: '16px 0 0' }}>
-              Si en <strong>Síguelo Plus</strong> ves el título con los mismos datos: revisa arriba el <strong>tipo de registro</strong> (p. ej. Personas naturales). La consulta automática usa el canal <code style={{ fontSize: '12px' }}>detalleTitulo</code> del API, que no es idéntico al buscador web tras el CAPTCHA; en algunos casos el portal muestra información que la API aún no devuelve igual.
-            </p>
+            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', lineHeight: 1.65, color: 'var(--muted)', margin: '16px 0 0' }}>
+              <p style={{ margin: '0 0 12px' }}>
+                Si en el <strong>portal oficial</strong> el mismo número, año y oficina sí aparecen, comprueba arriba el <strong>tipo de registro</strong> (por ejemplo <strong>Personas naturales</strong> para muchos poderes).
+              </p>
+              <p style={{ margin: 0 }}>
+                Arthur consulta SUNARP por un canal automático <strong>sin CAPTCHA</strong>. La página de Síguelo Plus usa otra vía (con verificación Turnstile); por eso a veces allí figura el título y aquí la base responde que no existe.
+              </p>
+              <p style={{ margin: '12px 0 0' }}>
+                <a
+                  href="https://sigueloplus.sunarp.gob.pe/siguelo/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'underline' }}
+                >
+                  Abrir Síguelo Plus (sitio oficial SUNARP) ↗
+                </a>
+              </p>
+            </div>
           )}
         </div>
       )}
