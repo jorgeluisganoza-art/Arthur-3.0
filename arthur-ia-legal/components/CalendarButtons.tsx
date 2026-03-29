@@ -51,15 +51,13 @@ export default function CalendarButtons({ title, date, description = '' }: Calen
   };
 
   return (
-    <span
-      style={{ display: 'inline-flex', gap: '6px', marginLeft: '8px' }}
-      onClick={(e) => e.preventDefault()}
-    >
+    <span style={{ display: 'inline-flex', gap: '6px', marginLeft: '8px' }}>
       <a
         href={toGoogleCalendarUrl(title, date, description)}
         target="_blank"
         rel="noopener noreferrer"
         style={btnStyle}
+        onClick={(e) => e.stopPropagation()}
         onMouseOver={e => {
           e.currentTarget.style.borderColor = '#4285f4';
           e.currentTarget.style.color = '#4285f4';
@@ -69,13 +67,14 @@ export default function CalendarButtons({ title, date, description = '' }: Calen
           e.currentTarget.style.color = 'var(--muted)';
         }}
       >
-        Google
+        Google Calendar
       </a>
       <a
         href={toOutlookUrl(title, date, description)}
         target="_blank"
         rel="noopener noreferrer"
         style={btnStyle}
+        onClick={(e) => e.stopPropagation()}
         onMouseOver={e => {
           e.currentTarget.style.borderColor = '#0078d4';
           e.currentTarget.style.color = '#0078d4';
@@ -85,7 +84,7 @@ export default function CalendarButtons({ title, date, description = '' }: Calen
           e.currentTarget.style.color = 'var(--muted)';
         }}
       >
-        Outlook
+        Outlook Calendar
       </a>
     </span>
   );
