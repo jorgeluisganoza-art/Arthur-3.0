@@ -2,70 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 
-const P = new Uint8Array(512);
-const permutation = [
-  151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,
-  140,36,103,30,69,142,8,99,37,240,21,10,23,190,6,148,247,
-  120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,
-  33,88,237,149,56,87,174,20,125,136,171,168,68,175,74,165,
-  71,134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,
-  133,230,220,105,92,41,55,46,245,40,244,102,143,54,65,25,
-  63,161,1,216,80,73,209,76,132,187,208,89,18,169,200,196,
-  135,130,116,188,159,86,164,100,109,198,173,186,3,64,52,217,
-  226,250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,
-  59,227,47,16,58,17,182,189,28,42,223,183,170,213,119,248,
-  152,2,44,154,163,70,221,153,101,155,167,43,172,9,129,22,
-  39,253,19,98,108,110,79,113,224,232,178,185,112,104,218,246,
-  97,228,251,34,242,193,238,210,144,12,191,179,162,241,81,51,
-  145,235,249,14,239,107,49,192,214,31,181,199,106,157,184,84,
-  204,176,115,121,50,45,127,4,150,254,138,236,205,93,222,114,
-  67,29,24,72,243,141,128,195,78,66,215,61,156,180
-];
-for (let i = 0; i < 256; i++) P[i] = P[i + 256] = permutation[i];
-
-function fade(t: number) { return t * t * t * (t * (t * 6 - 15) + 10); }
-function lerp(t: number, a: number, b: number) { return a + t * (b - a); }
-function grad(hash: number, x: number, y: number) {
-  const h = hash & 3;
-  const u = h < 2 ? x : y;
-  const v = h < 2 ? y : x;
-  return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
-}
-function noise(x: number, y: number) {
-  const X = Math.floor(x) & 255;
-  const Y = Math.floor(y) & 255;
-  x -= Math.floor(x); y -= Math.floor(y);
-  const u = fade(x), v = fade(y);
-  const a = P[X] + Y, b = P[X + 1] + Y;
-  return lerp(v,
-    lerp(u, grad(P[a], x, y),     grad(P[b], x - 1, y)),
-    lerp(u, grad(P[a + 1], x, y - 1), grad(P[b + 1], x - 1, y - 1))
-  );
-}
-
-function fbm(x: number, y: number, octaves = 6) {
-  let value = 0, amplitude = 0.5, frequency = 1, max = 0;
-  for (let i = 0; i < octaves; i++) {
-    value += amplitude * noise(x * frequency, y * frequency);
-    max += amplitude;
-    amplitude *= 0.5;
-    frequency *= 2.0;
-  }
-  return value / max;
-}
-
-function marble(x: number, y: number, time: number) {
-  const qx = fbm(x + 0.0 + time * 0.08, y + 0.0);
-  const qy = fbm(x + 5.2 + time * 0.08, y + 1.3);
-
-  const rx = fbm(x + 4.0 * qx + 1.7 + time * 0.04, y + 4.0 * qy + 9.2);
-  const ry = fbm(x + 4.0 * qx + 8.3 + time * 0.04, y + 4.0 * qy + 2.8);
-
-  return fbm(x + 4.0 * rx, y + 4.0 * ry);
-}
-
 export default function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouseRef = useRef({ x: 0.5, y: 0.5, intensity: 0 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -75,6 +14,7 @@ export default function AnimatedBackground() {
 
     let animId: number;
     let time = 0;
+    let currentIntensity = 0;
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -83,42 +23,118 @@ export default function AnimatedBackground() {
     resize();
     window.addEventListener('resize', resize);
 
-    const mobile = window.innerWidth < 768;
-    const SPACING = mobile ? 28 : 22;
-    const MAX_RADIUS = 7.5;
-    const MIN_RADIUS = 0.4;
+    const handleMouse = (e: MouseEvent) => {
+      const mx = e.clientX / window.innerWidth;
+      const my = e.clientY / window.innerHeight;
+      mouseRef.current.x = mx;
+      mouseRef.current.y = my;
+
+      const centerX = 0.5;
+      const centerY = 0.45;
+      const dx = mx - centerX;
+      const dy = my - centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      mouseRef.current.intensity = Math.max(0, 1 - dist * 2.2);
+    };
+    window.addEventListener('mousemove', handleMouse);
 
     const animate = () => {
-      time += 0.003;
+      time += 0.008;
+      const w = canvas.width;
+      const h = canvas.height;
 
-      ctx.fillStyle = '#0a2318';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const targetIntensity = mouseRef.current.intensity;
+      currentIntensity += (targetIntensity - currentIntensity) * 0.04;
 
-      const cols = Math.ceil(canvas.width / SPACING) + 1;
-      const rows = Math.ceil(canvas.height / SPACING) + 1;
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, w, h);
 
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const x = col * SPACING;
-          const y = row * SPACING;
+      const cx = w * 0.5;
+      const horizonY = h * 0.72;
 
-          const nx = x * 0.003;
-          const ny = y * 0.003;
+      const baseGlow = 0.25 + currentIntensity * 0.75;
 
-          const raw = marble(nx, ny, time);
-          const value = Math.max(0, Math.min(1, (raw + 1) / 2));
+      // Horizon line glow
+      const lineGrad = ctx.createLinearGradient(0, horizonY - 2, 0, horizonY + 2);
+      lineGrad.addColorStop(0, `rgba(40, 200, 120, ${0.05 * baseGlow})`);
+      lineGrad.addColorStop(0.5, `rgba(60, 255, 150, ${0.15 * baseGlow})`);
+      lineGrad.addColorStop(1, `rgba(40, 200, 120, ${0.05 * baseGlow})`);
+      ctx.fillStyle = lineGrad;
+      const lineSpread = w * (0.4 + currentIntensity * 0.35);
+      ctx.fillRect(cx - lineSpread, horizonY - 1, lineSpread * 2, 2);
 
-          const t = Math.pow(value, 1.4);
-          const radius = MIN_RADIUS + t * (MAX_RADIUS - MIN_RADIUS);
+      // Main light source — large radial glow
+      const mainRadius = Math.min(w, h) * (0.35 + currentIntensity * 0.3);
+      const mainGrad = ctx.createRadialGradient(cx, horizonY, 0, cx, horizonY, mainRadius);
+      mainGrad.addColorStop(0, `rgba(180, 255, 210, ${0.9 * baseGlow})`);
+      mainGrad.addColorStop(0.08, `rgba(100, 240, 160, ${0.6 * baseGlow})`);
+      mainGrad.addColorStop(0.25, `rgba(50, 180, 100, ${0.3 * baseGlow})`);
+      mainGrad.addColorStop(0.5, `rgba(20, 100, 60, ${0.12 * baseGlow})`);
+      mainGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = mainGrad;
+      ctx.fillRect(0, 0, w, h);
 
-          const opacity = 0.08 + value * 0.72;
+      // Upward light rays
+      const rayCount = 24 + Math.floor(currentIntensity * 16);
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      for (let i = 0; i < rayCount; i++) {
+        const angle = -Math.PI * 0.5 + (i / rayCount - 0.5) * Math.PI * 0.9;
+        const wobble = Math.sin(time * 0.7 + i * 2.3) * 0.03;
+        const rayAngle = angle + wobble;
 
-          ctx.beginPath();
-          ctx.arc(x, y, radius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(232, 220, 200, ${opacity.toFixed(3)})`;
-          ctx.fill();
-        }
+        const rayLength = (h * 0.5 + h * 0.3 * currentIntensity) *
+          (0.5 + 0.5 * Math.sin(time * 0.4 + i * 1.7));
+
+        const rayWidth = (1.5 + currentIntensity * 2.5) *
+          (0.5 + 0.5 * Math.cos(time * 0.3 + i * 0.8));
+
+        const opacity = (0.03 + currentIntensity * 0.06) *
+          (0.4 + 0.6 * Math.sin(time * 0.5 + i * 1.1));
+
+        const endX = cx + Math.cos(rayAngle) * rayLength;
+        const endY = horizonY + Math.sin(rayAngle) * rayLength;
+
+        const rayGrad = ctx.createLinearGradient(cx, horizonY, endX, endY);
+        rayGrad.addColorStop(0, `rgba(120, 255, 180, ${opacity})`);
+        rayGrad.addColorStop(0.4, `rgba(60, 200, 120, ${opacity * 0.5})`);
+        rayGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        ctx.beginPath();
+        ctx.moveTo(cx, horizonY);
+        ctx.lineTo(endX - rayWidth, endY);
+        ctx.lineTo(endX + rayWidth, endY);
+        ctx.closePath();
+        ctx.fillStyle = rayGrad;
+        ctx.fill();
       }
+      ctx.restore();
+
+      // Secondary wide atmospheric glow (covers upper area)
+      const atmoRadius = w * (0.5 + currentIntensity * 0.3);
+      const atmoGrad = ctx.createRadialGradient(cx, horizonY, 0, cx, horizonY, atmoRadius);
+      atmoGrad.addColorStop(0, `rgba(80, 220, 140, ${0.08 * baseGlow})`);
+      atmoGrad.addColorStop(0.3, `rgba(30, 120, 70, ${0.04 * baseGlow})`);
+      atmoGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = atmoGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Subtle pulsing inner core
+      const pulseSize = 20 + Math.sin(time * 1.5) * 5 + currentIntensity * 30;
+      const pulseGrad = ctx.createRadialGradient(cx, horizonY, 0, cx, horizonY, pulseSize);
+      pulseGrad.addColorStop(0, `rgba(220, 255, 235, ${0.8 * baseGlow})`);
+      pulseGrad.addColorStop(0.5, `rgba(150, 255, 200, ${0.3 * baseGlow})`);
+      pulseGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = pulseGrad;
+      ctx.fillRect(cx - pulseSize, horizonY - pulseSize, pulseSize * 2, pulseSize * 2);
+
+      // Curved horizon shadow (blocks light below horizon)
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, horizonY + h * 0.28, w * 0.7, h * 0.28, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+      ctx.restore();
 
       animId = requestAnimationFrame(animate);
     };
@@ -128,6 +144,7 @@ export default function AnimatedBackground() {
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', handleMouse);
     };
   }, []);
 
@@ -142,6 +159,7 @@ export default function AnimatedBackground() {
         height: '100vh',
         zIndex: 0,
         display: 'block',
+        background: '#000000',
       }}
     />
   );
