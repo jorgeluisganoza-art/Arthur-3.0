@@ -45,13 +45,12 @@ export default function LandingPage() {
             animation: 'fadeUp 0.8s ease forwards',
           }}
         >
-          {/* "arthur" text */}
           <h1
             style={{
               fontFamily: 'DM Serif Display, serif',
               fontStyle: 'italic',
               fontSize: 'clamp(72px, 10vw, 120px)',
-              color: '#ffffff',
+              color: '#0a2e3c',
               fontWeight: 400,
               letterSpacing: '-0.02em',
               lineHeight: 1,
@@ -64,7 +63,6 @@ export default function LandingPage() {
             arthur
           </h1>
 
-          {/* "Empieza ahora" CTA */}
           <div
             style={{
               position: 'absolute',
@@ -73,16 +71,16 @@ export default function LandingPage() {
               fontWeight: 500,
               textTransform: 'uppercase',
               letterSpacing: '0.15em',
-              color: '#ffffff',
+              color: '#0a2e3c',
               transition: 'opacity 0.35s ease, transform 0.35s ease',
               opacity: hovered ? 1 : 0,
               transform: hovered ? 'scale(1)' : 'scale(1.05)',
               padding: '22px 52px',
-              border: '1px solid rgba(255,255,255,0.35)',
+              border: '1px solid rgba(10,46,60,0.3)',
               whiteSpace: 'nowrap',
             }}
           >
-            Empieza ahora →
+            Empieza ahora &rarr;
           </div>
         </div>
       </div>
@@ -99,10 +97,10 @@ export default function LandingPage() {
           fontSize: '10px',
           textTransform: 'uppercase',
           letterSpacing: '0.15em',
-          color: 'rgba(255,255,255,0.2)',
+          color: 'rgba(10,46,60,0.3)',
         }}
       >
-        Arthur — 2026
+        Arthur &mdash; 2026
       </div>
     </div>
   );
