@@ -1,156 +1,142 @@
-import { getTramiteById, updateTramite, addHistorial, addPlazo, logNotification } from '@/lib/db';
-import { scrapeTitulo } from '@/lib/sunarp-scraper';
-import { getNextStepSuggestion, analyzeEsquela } from '@/lib/ai-service';
-import { sendWhatsApp, sendEmail } from '@/lib/notifications';
+import { NextResponse } from 'next/server'
+import { scrapeTitulo } from '@/lib/sunarp-scraper'
+import getDb from '@/lib/db'
 
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+  const db = getDb()
+  const tramiteId = parseInt(id)
+
   try {
-    const { id } = await params;
-    const tramiteId = parseInt(id);
-    const tramite = getTramiteById(tramiteId);
+    // 1. Get tramite from DB
+    const tramite = db.prepare(
+      'SELECT * FROM tramites WHERE id = ? AND activo = 1'
+    ).get(tramiteId) as any
 
     if (!tramite) {
-      return Response.json({ error: 'Trámite no encontrado' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Trámite no encontrado' },
+        { status: 404 }
+      )
     }
 
-    // 1. Scrape SUNARP
+    // 2. Scrape SUNARP (tipo is needed for the API's tipoRegistro field)
     const result = await scrapeTitulo(
       tramite.numero_titulo,
       tramite.anio,
-      tramite.oficina_registral
-    );
+      tramite.oficina_registral,
+      tramite.tipo
+    )
 
-    // Handle portal down gracefully
-    if (!result) {
-      updateTramite(tramiteId, { last_checked: new Date().toISOString() });
-      return Response.json({
+    // 3. If portal is down, return gracefully
+    if (result.portalDown) {
+      return NextResponse.json({
         changed: false,
         estado: tramite.estado_actual,
-        suggestion: 'El portal SUNARP no está disponible en este momento. Se muestra el último estado conocido.',
-        notificacionesEnviadas: { whatsapp: false, email: false },
-        error: 'Portal SUNARP no disponible',
-      });
+        portalDown: true,
+        message: 'Portal SUNARP no disponible. Mostrando último estado conocido.',
+        lastChecked: tramite.last_checked
+      })
     }
 
-    // 2. Detect change
-    const changed = result.hash !== tramite.estado_hash;
+    // 4. Check if anything changed
+    const hasChanged = result.hash !== tramite.estado_hash && result.hash !== ''
 
-    // 3. Always update last_checked
-    const updates: Record<string, unknown> = {
-      last_checked: result.scrapedAt,
-    };
+    // 5. Always update last_checked
+    db.prepare(`
+      UPDATE tramites
+      SET last_checked = datetime('now')
+      WHERE id = ?
+    `).run(tramiteId)
 
-    let suggestion = '';
-    const notificacionesEnviadas = { whatsapp: false, email: false };
-
-    if (changed) {
-      updates.estado_actual = result.estado;
-      updates.estado_hash = result.hash;
-      updates.observacion_texto = result.observacion;
-      updates.calificador = result.calificador;
-
-      // a. Update DB
-      updateTramite(tramiteId, updates);
-
-      // b. Add historial
-      addHistorial(tramiteId, result.estado, result.observacion, result.hash, true);
-
-      // c. AI suggestion
-      suggestion = await getNextStepSuggestion(
+    // 6. If changed: update everything
+    if (hasChanged) {
+      // Update tramite
+      db.prepare(`
+        UPDATE tramites
+        SET estado_actual = ?,
+            estado_hash = ?,
+            observacion_texto = ?,
+            calificador = ?,
+            last_checked = datetime('now')
+        WHERE id = ?
+      `).run(
         result.estado,
-        result.observacion,
-        tramite.tipo,
-        tramite.alias
-      );
+        result.hash,
+        result.observacion || '',
+        result.calificador || '',
+        tramiteId
+      )
 
-      // d. If OBSERVADO: analyze and create plazos
-      if (result.isObservado && result.observacion) {
-        try {
-          const analysis = await analyzeEsquela(result.observacion, tramite.tipo, tramite.alias);
-
-          const subsanacionDate = new Date();
-          subsanacionDate.setDate(subsanacionDate.getDate() + (analysis.plazoDias || 30));
-
-          addPlazo(
-            tramiteId,
-            'Plazo de subsanación de observaciones',
-            subsanacionDate.toISOString().split('T')[0],
-            'subsanacion'
-          );
-
-          const apelacionDate = new Date();
-          apelacionDate.setDate(apelacionDate.getDate() + 15);
-          addPlazo(
-            tramiteId,
-            'Plazo para recurso de apelación',
-            apelacionDate.toISOString().split('T')[0],
-            'apelacion'
-          );
-        } catch (aiErr) {
-          console.error('[poll-now] analyzeEsquela error:', aiErr);
-        }
-      }
-
-      // e. Send WhatsApp
-      if (tramite.whatsapp_number) {
-        const waMsgText = changed
-          ? `El estado de tu trámite "${tramite.alias}" ha cambiado a ${result.estado}.`
-          : `Tu trámite "${tramite.alias}" sigue en estado ${result.estado}.`;
-
-        const waSuccess = await sendWhatsApp(
-          tramite.whatsapp_number,
-          tramite.alias,
-          result.estado,
-          waMsgText,
-          suggestion,
-          tramiteId
-        );
-        notificacionesEnviadas.whatsapp = waSuccess;
-        logNotification(tramiteId, 'whatsapp', result.estado, waMsgText, waSuccess);
-      }
-
-      // f. Send email
-      if (tramite.email) {
-        const emailMsgText = `El estado de tu trámite "${tramite.alias}" ha cambiado a ${result.estado}.`;
-        const emailSuccess = await sendEmail(
-          tramite.email,
-          tramite.alias,
-          result.estado,
-          emailMsgText,
-          suggestion,
-          result.observacion,
-          tramiteId
-        );
-        notificacionesEnviadas.email = emailSuccess;
-        logNotification(tramiteId, 'email', result.estado, emailMsgText, emailSuccess);
-      }
-    } else {
-      // No change, just update last_checked and get suggestion
-      updateTramite(tramiteId, updates);
-      addHistorial(tramiteId, result.estado, result.observacion, result.hash, false);
-
-      suggestion = await getNextStepSuggestion(
+      // Save to historial
+      db.prepare(`
+        INSERT INTO historial
+        (tramite_id, estado, observacion, estado_hash, es_cambio)
+        VALUES (?, ?, ?, ?, 1)
+      `).run(
+        tramiteId,
         result.estado,
-        result.observacion,
-        tramite.tipo,
-        tramite.alias
-      );
+        result.observacion || '',
+        result.hash
+      )
+
+      // If OBSERVADO, create plazo automatically
+      if (result.isObservado) {
+        const vencimiento = new Date()
+        vencimiento.setDate(vencimiento.getDate() + 30)
+
+        db.prepare(`
+          INSERT INTO plazos
+          (tramite_id, descripcion, fecha_vencimiento, tipo)
+          VALUES (?, ?, ?, ?)
+        `).run(
+          tramiteId,
+          'Plazo de subsanación de observaciones',
+          vencimiento.toISOString(),
+          'subsanacion'
+        )
+      }
+
+      if (result.isTacha) {
+        const vencimiento = new Date()
+        vencimiento.setDate(vencimiento.getDate() + 15)
+
+        db.prepare(`
+          INSERT INTO plazos
+          (tramite_id, descripcion, fecha_vencimiento, tipo)
+          VALUES (?, ?, ?, ?)
+        `).run(
+          tramiteId,
+          'Plazo para recurso de apelación por tacha',
+          vencimiento.toISOString(),
+          'apelacion'
+        )
+      }
+
+      // TODO: Send WhatsApp + email notifications here
+      // (implement after confirming scraper works)
     }
 
-    return Response.json({
-      changed,
+    return NextResponse.json({
+      changed: hasChanged,
       estado: result.estado,
-      suggestion,
-      notificacionesEnviadas,
-    });
-  } catch (error) {
-    console.error('[API] POST /tramites/[id]/poll-now error:', error);
-    return Response.json(
-      { error: 'Error al consultar SUNARP', changed: false },
+      observacion: result.observacion,
+      calificador: result.calificador,
+      portalDown: false,
+      scrapedAt: result.scrapedAt,
+      message: hasChanged
+        ? `Estado actualizado a ${result.estado}`
+        : 'Sin cambios desde la última revisión'
+    })
+
+  } catch (error: any) {
+    console.error('[poll-now] Error:', error)
+    return NextResponse.json(
+      { error: error.message, portalDown: true },
       { status: 500 }
-    );
+    )
   }
 }

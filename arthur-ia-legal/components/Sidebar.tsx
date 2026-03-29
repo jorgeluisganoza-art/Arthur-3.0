@@ -39,6 +39,22 @@ const IconChat = () => (
   </svg>
 );
 
+const IconArchive = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="1" y="2" width="14" height="3" rx="0.5" />
+    <path d="M2.5 5v8.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V5" />
+    <path d="M6 8h4" />
+  </svg>
+);
+
+const IconTrash = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 4h12M5 4V2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5V4" />
+    <path d="M3.5 4l.5 10a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l.5-10" />
+    <path d="M6.5 7v5M9.5 7v5" />
+  </svg>
+);
+
 export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -61,6 +77,8 @@ export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
     { href: '/dashboard/agenda', label: 'Agenda de Plazos', hasAlert: false, Icon: IconCalendar },
     { href: '/dashboard/alertas', label: 'Alertas', hasAlert: false, Icon: IconBell },
     { href: '/dashboard/chat', label: 'Consulta Legal', hasAlert: false, Icon: IconChat },
+    { href: '/dashboard/archivados', label: 'Archivados', hasAlert: false, Icon: IconArchive },
+    { href: '/dashboard/eliminados', label: 'Eliminados', hasAlert: false, Icon: IconTrash },
   ];
 
   const isActive = (href: string) => {

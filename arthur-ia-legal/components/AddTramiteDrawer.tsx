@@ -3,36 +3,72 @@
 import { useState, useEffect } from 'react';
 
 const SUNARP_OFFICES = [
-  { code: '1401', name: 'Lima' },
-  { code: '1402', name: 'Callao' },
-  { code: '1201', name: 'Lima Norte' },
-  { code: '0201', name: 'Arequipa' },
-  { code: '0501', name: 'Cusco' },
-  { code: '1001', name: 'La Libertad' },
-  { code: '1101', name: 'Lambayeque' },
-  { code: '1901', name: 'Piura' },
-  { code: '0101', name: 'Abancay' },
-  { code: '0301', name: 'Ayacucho' },
-  { code: '0401', name: 'Cajamarca' },
-  { code: '0601', name: 'Huancavelica' },
-  { code: '0701', name: 'Huánuco' },
-  { code: '0801', name: 'Ica' },
-  { code: '0901', name: 'Junín' },
-  { code: '1501', name: 'Loreto' },
-  { code: '1601', name: 'Madre de Dios' },
-  { code: '1701', name: 'Moquegua' },
-  { code: '1801', name: 'Pasco' },
-  { code: '2001', name: 'Puno' },
-  { code: '2101', name: 'San Martín' },
-  { code: '2201', name: 'Tacna' },
-  { code: '2301', name: 'Tumbes' },
-  { code: '2401', name: 'Ucayali' },
+  { code: '0101', name: 'Lima' },
+  { code: '0102', name: 'Callao' },
+  { code: '0103', name: 'Huaral' },
+  { code: '0104', name: 'Huacho' },
+  { code: '0105', name: 'Cañete' },
+  { code: '0106', name: 'Barranca' },
+  { code: '0201', name: 'Huancayo' },
+  { code: '0202', name: 'Huánuco' },
+  { code: '0204', name: 'Pasco' },
+  { code: '0205', name: 'Satipo' },
+  { code: '0206', name: 'La Merced (Selva Central)' },
+  { code: '0207', name: 'Tarma' },
+  { code: '0208', name: 'Tingo María' },
+  { code: '0209', name: 'Huancavelica' },
+  { code: '0301', name: 'Arequipa' },
+  { code: '0302', name: 'Camaná' },
+  { code: '0303', name: 'Castilla - Aplao' },
+  { code: '0304', name: 'Islay - Mollendo' },
+  { code: '0401', name: 'Huaraz' },
+  { code: '0402', name: 'Casma' },
+  { code: '0403', name: 'Chimbote' },
+  { code: '0501', name: 'Piura' },
+  { code: '0502', name: 'Sullana' },
+  { code: '0503', name: 'Tumbes' },
+  { code: '0601', name: 'Cusco' },
+  { code: '0602', name: 'Abancay' },
+  { code: '0603', name: 'Madre de Dios' },
+  { code: '0604', name: 'Quillabamba' },
+  { code: '0605', name: 'Sicuani' },
+  { code: '0606', name: 'Espinar' },
+  { code: '0607', name: 'Andahuaylas' },
+  { code: '0701', name: 'Tacna' },
+  { code: '0702', name: 'Ilo' },
+  { code: '0703', name: 'Juliaca' },
+  { code: '0704', name: 'Moquegua' },
+  { code: '0705', name: 'Puno' },
+  { code: '0801', name: 'Trujillo' },
+  { code: '0802', name: 'Chepén' },
+  { code: '0803', name: 'Huamachuco' },
+  { code: '0804', name: 'Otuzco' },
+  { code: '0805', name: 'San Pedro' },
+  { code: '0901', name: 'Maynas (Iquitos)' },
+  { code: '1001', name: 'Ica' },
+  { code: '1002', name: 'Chincha' },
+  { code: '1003', name: 'Pisco' },
+  { code: '1004', name: 'Nazca' },
+  { code: '1101', name: 'Chiclayo' },
+  { code: '1102', name: 'Cajamarca' },
+  { code: '1103', name: 'Jaén' },
+  { code: '1104', name: 'Bagua' },
+  { code: '1105', name: 'Chachapoyas' },
+  { code: '1106', name: 'Chota' },
+  { code: '1201', name: 'Moyobamba' },
+  { code: '1202', name: 'Tarapoto' },
+  { code: '1203', name: 'Juanjuí' },
+  { code: '1204', name: 'Yurimaguas' },
+  { code: '1301', name: 'Pucallpa' },
+  { code: '1401', name: 'Ayacucho' },
+  { code: '1402', name: 'Huanta' },
 ];
 
 const TIPO_OPTIONS = [
   { value: 'predio', emoji: '🏠', label: 'Predio' },
   { value: 'empresa', emoji: '🏢', label: 'Empresa' },
   { value: 'vehiculo', emoji: '🚗', label: 'Vehículo' },
+  { value: 'mandatos', emoji: '📜', label: 'Mandatos y Poderes' },
 ];
 
 const FREQUENCY_OPTIONS = [
@@ -53,7 +89,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
   const [tipo, setTipo] = useState('predio');
   const [numero, setNumero] = useState('');
   const [anio, setAnio] = useState(new Date().getFullYear().toString());
-  const [oficina, setOficina] = useState('1401');
+  const [oficina, setOficina] = useState('0101');
   const [alias, setAlias] = useState('');
   const [frecuencia, setFrecuencia] = useState(4);
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
@@ -109,7 +145,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
     setTipo('predio');
     setNumero('');
     setAnio(new Date().getFullYear().toString());
-    setOficina('1401');
+    setOficina('0101');
     setAlias('');
     setFrecuencia(4);
     setWhatsappEnabled(true);
@@ -197,7 +233,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
 
         {/* Tipo selector */}
         <label style={labelStyle}>TIPO DE TRÁMITE</label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '24px' }}>
           {TIPO_OPTIONS.map(opt => (
             <button
               key={opt.value}
@@ -231,7 +267,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
               type="text"
               value={numero}
               onChange={e => setNumero(e.target.value)}
-              placeholder={tipo === 'predio' ? 'Ej: 001234' : tipo === 'empresa' ? 'Ej: 005678' : 'Ej: 009012'}
+              placeholder={tipo === 'predio' ? 'Ej: 001234' : tipo === 'empresa' ? 'Ej: 005678' : tipo === 'mandatos' ? 'Ej: 003456' : 'Ej: 009012'}
               style={inputStyle}
               onFocus={e => { e.currentTarget.style.borderColor = 'var(--ink)'; }}
               onBlur={e => { e.currentTarget.style.borderColor = 'rgba(15,15,15,0.15)'; }}

@@ -42,7 +42,9 @@ function initSchema(db: Database.Database) {
       email TEXT,
       activo INTEGER DEFAULT 1,
       last_checked TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now')),
+      archived_at TEXT,
+      deleted_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS historial (
@@ -85,6 +87,23 @@ function initSchema(db: Database.Database) {
     );
   `);
 
+  // Migrate: add archived_at/deleted_at columns if missing
+  const cols = db.prepare("PRAGMA table_info(tramites)").all() as { name: string }[];
+  const colNames = new Set(cols.map(c => c.name));
+  if (!colNames.has('archived_at')) {
+    db.exec('ALTER TABLE tramites ADD COLUMN archived_at TEXT');
+  }
+  if (!colNames.has('deleted_at')) {
+    db.exec('ALTER TABLE tramites ADD COLUMN deleted_at TEXT');
+  }
+
+  // Purge tramites deleted > 30 days ago
+  db.prepare(`
+    DELETE FROM tramites
+    WHERE deleted_at IS NOT NULL
+      AND deleted_at < datetime('now', '-30 days')
+  `).run();
+
   // Seed data on first run
   const count = db.prepare('SELECT COUNT(*) as c FROM tramites').get() as { c: number };
   if (count.c === 0) {
@@ -102,20 +121,20 @@ function seedData(db: Database.Database) {
   `);
 
   const r1 = insert.run(
-    'predio', '001234', '2024', '1401', 'Lima',
+    'predio', '001234', '2024', '0101', 'Lima',
     'Casa San Borja', 'OBSERVADO',
     'Se observa el título por los siguientes motivos: 1) El plano de localización no coincide con las coordenadas UTM consignadas en la memoria descriptiva. 2) La firma del propietario en la minuta no cuenta con certificación notarial vigente. Sírvase subsanar en el plazo de ley.',
     4, '+51999000001', 'hector@estudio.pe'
   );
 
   insert.run(
-    'empresa', '005678', '2024', '1401', 'Lima',
+    'empresa', '005678', '2024', '0101', 'Lima',
     'Tech Solutions SAC', 'PENDIENTE',
     null, 4, null, null
   );
 
   insert.run(
-    'vehiculo', '009012', '2024', '1401', 'Lima',
+    'vehiculo', '009012', '2024', '0101', 'Lima',
     'Toyota Hilux', 'INSCRITO',
     null, 8, null, null
   );
@@ -166,6 +185,8 @@ export interface Tramite {
   activo: number;
   last_checked: string | null;
   created_at: string;
+  archived_at: string | null;
+  deleted_at: string | null;
 }
 
 export interface Historial {
@@ -200,11 +221,54 @@ export interface Notification {
 }
 
 export function getAllTramites(): Tramite[] {
-  return getDb().prepare('SELECT * FROM tramites WHERE activo = 1 ORDER BY created_at DESC').all() as Tramite[];
+  return getDb().prepare(
+    'SELECT * FROM tramites WHERE activo = 1 AND archived_at IS NULL AND deleted_at IS NULL ORDER BY created_at DESC'
+  ).all() as Tramite[];
 }
 
 export function getTramiteById(id: number): Tramite | null {
-  return getDb().prepare('SELECT * FROM tramites WHERE id = ? AND activo = 1').get(id) as Tramite | null;
+  return getDb().prepare(
+    'SELECT * FROM tramites WHERE id = ? AND deleted_at IS NULL'
+  ).get(id) as Tramite | null;
+}
+
+export function getArchivedTramites(): Tramite[] {
+  return getDb().prepare(
+    'SELECT * FROM tramites WHERE archived_at IS NOT NULL AND deleted_at IS NULL ORDER BY archived_at DESC'
+  ).all() as Tramite[];
+}
+
+export function getDeletedTramites(): Tramite[] {
+  return getDb().prepare(
+    'SELECT * FROM tramites WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC'
+  ).all() as Tramite[];
+}
+
+export function archiveTramite(id: number) {
+  getDb().prepare(
+    "UPDATE tramites SET archived_at = datetime('now'), activo = 0 WHERE id = ? AND deleted_at IS NULL"
+  ).run(id);
+}
+
+export function restoreTramite(id: number) {
+  getDb().prepare(
+    'UPDATE tramites SET archived_at = NULL, deleted_at = NULL, activo = 1 WHERE id = ?'
+  ).run(id);
+}
+
+export function softDeleteTramite(id: number) {
+  getDb().prepare(
+    "UPDATE tramites SET deleted_at = datetime('now'), archived_at = NULL, activo = 0 WHERE id = ?"
+  ).run(id);
+}
+
+export function permanentDeleteTramite(id: number) {
+  const db = getDb();
+  db.prepare('DELETE FROM historial WHERE tramite_id = ?').run(id);
+  db.prepare('DELETE FROM plazos WHERE tramite_id = ?').run(id);
+  db.prepare('DELETE FROM notifications WHERE tramite_id = ?').run(id);
+  db.prepare('DELETE FROM documentos WHERE tramite_id = ?').run(id);
+  db.prepare('DELETE FROM tramites WHERE id = ?').run(id);
 }
 
 export function createTramite(data: Partial<Tramite>): Tramite {
@@ -231,7 +295,7 @@ export function updateTramite(id: number, data: Partial<Tramite>) {
 }
 
 export function deleteTramite(id: number) {
-  getDb().prepare('UPDATE tramites SET activo = 0 WHERE id = ?').run(id);
+  softDeleteTramite(id);
 }
 
 export function getHistorialByTramite(tramiteId: number): Historial[] {
@@ -282,7 +346,7 @@ export function logNotification(tramiteId: number, canal: string, estado: string
 export function getDashboardStats() {
   const db = getDb();
   const rows = db.prepare(
-    'SELECT estado_actual, COUNT(*) as count FROM tramites WHERE activo = 1 GROUP BY estado_actual'
+    'SELECT estado_actual, COUNT(*) as count FROM tramites WHERE activo = 1 AND archived_at IS NULL AND deleted_at IS NULL GROUP BY estado_actual'
   ).all() as { estado_actual: string; count: number }[];
 
   const stats: Record<string, number> = {};

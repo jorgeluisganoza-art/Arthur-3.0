@@ -52,10 +52,11 @@ async function runPollingLoop() {
           const result = await scrapeTitulo(
             tramite.numero_titulo,
             tramite.anio,
-            tramite.oficina_registral
+            tramite.oficina_registral,
+            tramite.tipo
           );
 
-          if (!result) {
+          if (result.portalDown) {
             updateTramite(tramite.id, { last_checked: new Date().toISOString() });
             continue;
           }

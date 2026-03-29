@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, type CSSProperties } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import StatusBadge from '@/components/StatusBadge';
 import CalendarButtons from '@/components/CalendarButtons';
 
@@ -103,7 +104,10 @@ function getDaysColor(days: number): string {
 
 export default function TramiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [tramite, setTramite] = useState<TramiteDetail | null>(null);
+  const [caseActionBusy, setCaseActionBusy] = useState(false);
+  const [detailMenuOpen, setDetailMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [demoStep, setDemoStep] = useState<string | null>(null);
   const [demoResult, setDemoResult] = useState<PollResult | null>(null);
@@ -147,6 +151,56 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  async function handleArchiveCase() {
+    setCaseActionBusy(true);
+    try {
+      const res = await fetch(`/api/tramites/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'archive' }),
+      });
+      if (res.ok) {
+        setDetailMenuOpen(false);
+        router.push('/dashboard/archivados');
+      } else window.alert('No se pudo archivar. Intenta de nuevo.');
+    } finally {
+      setCaseActionBusy(false);
+    }
+  }
+
+  async function handleDeleteCase() {
+    const ok = window.confirm(
+      '¿Enviar este trámite a Eliminados? Dejará el seguimiento activo. Se borrará por completo en 30 días (puedes restaurarlo antes desde el menú Eliminados).'
+    );
+    if (!ok) return;
+    setCaseActionBusy(true);
+    try {
+      const res = await fetch(`/api/tramites/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'soft-delete' }),
+      });
+      if (res.ok) {
+        setDetailMenuOpen(false);
+        router.push('/dashboard/eliminados');
+      } else window.alert('No se pudo eliminar. Intenta de nuevo.');
+    } finally {
+      setCaseActionBusy(false);
+    }
+  }
+
+  const headerActionBtn: CSSProperties = {
+    background: 'transparent',
+    border: '1px solid rgba(15,15,15,0.15)',
+    borderRadius: 0,
+    padding: '10px 20px',
+    fontFamily: 'DM Mono, monospace',
+    fontSize: '10px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: 'var(--ink)',
+  };
+
   if (loading) {
     return (
       <div style={{ padding: '48px 64px' }}>
@@ -183,32 +237,130 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
         ← Mis Trámites
       </Link>
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', animation: 'fadeUp 0.4s ease forwards' }}>
+      {/* Header — z-index when menu open so dropdown is not covered by cards below (fadeUp uses transform) */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          animation: 'fadeUp 0.4s ease forwards',
+          overflow: 'visible',
+          ...(detailMenuOpen ? { position: 'relative', zIndex: 400 } : {}),
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 'clamp(32px, 4vw, 52px)', color: 'var(--ink)', fontWeight: 400 }}>
             {tramite.alias}
           </h1>
           <StatusBadge estado={tramite.estado_actual} />
         </div>
-        <button
-          onClick={handleDemo}
-          disabled={!!demoStep}
-          style={{
-            background: 'transparent',
-            border: '1px solid rgba(15,15,15,0.15)',
-            borderRadius: 0,
-            padding: '10px 20px',
-            fontFamily: 'DM Mono, monospace',
-            fontSize: '10px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            cursor: demoStep ? 'not-allowed' : 'pointer',
-            marginTop: '12px',
-          }}
-        >
-          {demoStep ? demoStep : 'Revisar ahora'}
-        </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginTop: '12px', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={handleDemo}
+            disabled={!!demoStep || caseActionBusy}
+            style={{
+              ...headerActionBtn,
+              cursor: demoStep || caseActionBusy ? 'not-allowed' : 'pointer',
+              opacity: demoStep || caseActionBusy ? 0.7 : 1,
+            }}
+          >
+            {demoStep ? demoStep : 'Revisar ahora'}
+          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
+                setDetailMenuOpen(v => !v);
+              }}
+              disabled={caseActionBusy || !!demoStep}
+              aria-expanded={detailMenuOpen}
+              aria-haspopup="true"
+              title="Más acciones"
+              style={{
+                ...headerActionBtn,
+                padding: '10px 16px',
+                color: 'var(--muted)',
+                letterSpacing: '0.12em',
+                cursor: caseActionBusy || demoStep ? 'not-allowed' : 'pointer',
+                opacity: caseActionBusy || demoStep ? 0.6 : 1,
+              }}
+            >
+              ···
+            </button>
+            {detailMenuOpen && (
+              <>
+                <div
+                  role="presentation"
+                  onClick={() => setDetailMenuOpen(false)}
+                  style={{ position: 'fixed', inset: 0, zIndex: 450 }}
+                />
+                <div
+                  role="menu"
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: '100%',
+                    marginTop: '4px',
+                    background: 'white',
+                    border: '1px solid rgba(15,15,15,0.1)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                    zIndex: 460,
+                    minWidth: '168px',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { void handleArchiveCase(); }}
+                    disabled={caseActionBusy}
+                    style={{
+                      width: '100%',
+                      padding: '10px 16px',
+                      background: 'none',
+                      border: 'none',
+                      fontFamily: 'DM Mono, monospace',
+                      fontSize: '10px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: 'var(--ink)',
+                      cursor: caseActionBusy ? 'not-allowed' : 'pointer',
+                      textAlign: 'left',
+                    }}
+                    onMouseOver={e => { if (!caseActionBusy) e.currentTarget.style.background = 'var(--paper-dark)'; }}
+                    onMouseOut={e => { e.currentTarget.style.background = 'none'; }}
+                  >
+                    Archivar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { void handleDeleteCase(); }}
+                    disabled={caseActionBusy}
+                    style={{
+                      width: '100%',
+                      padding: '10px 16px',
+                      background: 'none',
+                      border: 'none',
+                      borderTop: '1px solid rgba(15,15,15,0.06)',
+                      fontFamily: 'DM Mono, monospace',
+                      fontSize: '10px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: '#991b1b',
+                      cursor: caseActionBusy ? 'not-allowed' : 'pointer',
+                      textAlign: 'left',
+                    }}
+                    onMouseOver={e => { if (!caseActionBusy) e.currentTarget.style.background = 'rgba(153,27,27,0.04)'; }}
+                    onMouseOut={e => { e.currentTarget.style.background = 'none'; }}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
       <div style={{ width: '60px', height: '2px', background: '#1a3d2b', marginTop: '16px', marginBottom: '32px' }} />
 

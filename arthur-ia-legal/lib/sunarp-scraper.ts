@@ -1,222 +1,438 @@
-import axios from 'axios';
-import * as cheerio from 'cheerio';
-import crypto from 'crypto';
+import axios from 'axios'
+import CryptoJS from 'crypto-js'
+import crypto from 'crypto'
+
+// ── SUNARP Síguelo Plus API Configuration ──────────────────────────────────────
+// The old JSF form at enlinea.sunarp.gob.pe has been replaced by an Angular SPA
+// at sigueloplus.sunarp.gob.pe backed by a REST API gateway. All payloads are
+// AES-encrypted and the gateway requires an IBM Client-Id header.
+
+const API_GATEWAY = 'https://api-gateway.sunarp.gob.pe:9443/sunarp/siguelo'
+const TRACKING_API = `${API_GATEWAY}/siguelo-tracking/tracking/api`
+const OFICINAS_API = 'https://utilitarios-sunarp-production.apps.paas.sunarp.gob.pe/componentes/api'
+
+const CLIENT_ID = '30a3fd982c6f85a3a70b44fa1f302488'
+const ENCRYPT_KEY = 'sV2zUWiuNo@3uv8nu9ir4'
+
+const API_HEADERS = {
+  'Content-Type': 'application/json',
+  'X-IBM-Client-Id': CLIENT_ID,
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Origin': 'https://sigueloplus.sunarp.gob.pe',
+  'Referer': 'https://sigueloplus.sunarp.gob.pe/',
+}
+
+// ── Encryption helpers ─────────────────────────────────────────────────────────
+
+function encryptPayload(data: Record<string, unknown>): string {
+  return CryptoJS.AES.encrypt(JSON.stringify(data), ENCRYPT_KEY).toString()
+}
+
+function decryptField(ciphertext: string): string {
+  const bytes = CryptoJS.AES.decrypt(ciphertext, ENCRYPT_KEY)
+  return bytes.toString(CryptoJS.enc.Utf8)
+}
+
+function decryptApiResponse(data: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(data)) {
+    let decodedKey = key
+    try { decodedKey = Buffer.from(key, 'base64').toString('utf8') } catch { /* keep original key */ }
+    if (typeof val === 'string' && val.startsWith('U2FsdGVk')) {
+      const dec = decryptField(val)
+      try { result[decodedKey] = JSON.parse(dec) } catch { result[decodedKey] = dec }
+    } else {
+      result[decodedKey] = val
+    }
+  }
+  return result
+}
+
+// ── Oficina mapping ────────────────────────────────────────────────────────────
+// The DB stores oficina_registral as a 4-digit string "ZZOO" where ZZ=zone, OO=office.
+// The API needs codigoZona and codigoOficina separately.
+
+function parseOficina(oficina: string): { codigoZona: string; codigoOficina: string } {
+  const padded = oficina.padStart(4, '0')
+  return {
+    codigoZona: padded.substring(0, 2),
+    codigoOficina: padded.substring(2, 4),
+  }
+}
+
+const TIPO_REGISTRO_MAP: Record<string, string> = {
+  predio: '001',
+  empresa: '002',
+  vehiculo: '003',
+  persona: '004',
+  mandatos: '005',
+}
+
+function mapTipoRegistro(tipo: string): string {
+  return TIPO_REGISTRO_MAP[tipo.toLowerCase()] || '001'
+}
+
+// ── Status extraction from tracking events ─────────────────────────────────────
+
+const STATUS_KEYWORDS = [
+  'INSCRITO', 'OBSERVADO', 'TACHA', 'PENDIENTE',
+  'LIQUIDADO', 'BLOQUEADO', 'IMPROCEDENTE', 'EN CALIFICACIÓN',
+  'PRESENTADO', 'DESPACHADO',
+] as const
+
+function classifyEstado(raw: string): string {
+  const upper = raw.toUpperCase().trim()
+  for (const keyword of STATUS_KEYWORDS) {
+    if (upper.includes(keyword)) return keyword
+  }
+  return raw.trim() || 'SIN DATOS'
+}
+
+// ── Result interface ───────────────────────────────────────────────────────────
 
 export interface SunarpResult {
-  estado: string;
-  observacion: string | null;
-  calificador: string | null;
-  hash: string;
-  isObservado: boolean;
-  isInscrito: boolean;
-  isTacha: boolean;
-  scrapedAt: string;
+  estado: string
+  observacion: string
+  calificador: string
+  hash: string
+  isObservado: boolean
+  isInscrito: boolean
+  isTacha: boolean
+  isPendiente: boolean
+  portalDown: boolean
+  scrapedAt: string
+  rawResponse?: string
+  apiEndpoint: string
+  codigoRespuesta: string
 }
 
-const BASE_URL = 'https://enlinea.sunarp.gob.pe/sunarpweb/pages/acceso/frmTitulos.faces';
+function buildResult(
+  estado: string,
+  observacion: string,
+  calificador: string,
+  portalDown: boolean,
+  apiEndpoint: string,
+  codigoRespuesta: string,
+  rawResponse?: string,
+): SunarpResult {
+  const hashInput = `${estado}|${observacion}|${calificador}`
+  const hash = portalDown ? '' : crypto.createHash('md5').update(hashInput).digest('hex')
 
-const HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'es-PE,es;q=0.9,en;q=0.8',
-  'Accept-Encoding': 'gzip, deflate, br',
-  Connection: 'keep-alive',
-};
-
-function generateHash(estado: string, observacion: string | null): string {
-  const raw = `${estado}|${observacion || ''}`;
-  return crypto.createHash('md5').update(raw).digest('hex');
+  return {
+    estado,
+    observacion,
+    calificador,
+    hash,
+    isObservado: estado === 'OBSERVADO',
+    isInscrito: estado === 'INSCRITO',
+    isTacha: estado === 'TACHA',
+    isPendiente: estado === 'PENDIENTE' || estado === 'EN CALIFICACIÓN',
+    portalDown,
+    scrapedAt: new Date().toISOString(),
+    rawResponse: rawResponse?.substring(0, 8000),
+    apiEndpoint,
+    codigoRespuesta,
+  }
 }
 
-function detectEstado(html: string): string {
-  const $ = cheerio.load(html);
-  const text = $('body').text().toUpperCase();
+// ── API calls ──────────────────────────────────────────────────────────────────
 
-  // Look for explicit status keywords in the page content
-  const statusPatterns = [
-    { pattern: /TACHA/i, value: 'TACHA' },
-    { pattern: /OBSERVAD[OA]/i, value: 'OBSERVADO' },
-    { pattern: /INSCRIT[OA]/i, value: 'INSCRITO' },
-    { pattern: /PENDIENTE/i, value: 'PENDIENTE' },
-  ];
-
-  // Check within specific result elements first
-  const resultSelectors = [
-    '#form1\\:estado',
-    '#form1\\:txtEstado',
-    '.estado',
-    'span[id*="estado"]',
-    'td[id*="estado"]',
-    'div[id*="estado"]',
-    'span[id*="Estado"]',
-    'td[id*="Estado"]',
-  ];
-
-  for (const sel of resultSelectors) {
-    const el = $(sel);
-    if (el.length > 0) {
-      const elText = el.text().toUpperCase().trim();
-      for (const { pattern, value } of statusPatterns) {
-        if (pattern.test(elText)) return value;
-      }
-    }
-  }
-
-  // Fallback: scan all table cells and spans
-  const elements = $('td, span, div, p').toArray();
-  for (const el of elements) {
-    const elText = $(el).text().trim().toUpperCase();
-    if (elText.length < 50) {
-      for (const { pattern, value } of statusPatterns) {
-        if (pattern.test(elText)) return value;
-      }
-    }
-  }
-
-  // Last resort: full page text
-  for (const { pattern, value } of statusPatterns) {
-    if (pattern.test(text)) return value;
-  }
-
-  return 'SIN DATOS';
+interface DetalleTituloResponse {
+  codigoRespuesta: string
+  descripcionRespuesta: string
+  lstDetalleTitulo?: Array<{
+    codEstadoActual?: string
+    descriEstadoActual?: string
+    estadoActual?: string
+    codEtapa?: string
+    descriEtapa?: string
+    codEvento?: string
+    descriEvento?: string
+    fechaCreacion?: string
+    calificador?: string
+    descriCalificador?: string
+    observacion?: string
+    [key: string]: unknown
+  }>
 }
 
-function extractObservacion(html: string): string | null {
-  const $ = cheerio.load(html);
-
-  const obsSelectors = [
-    '#form1\\:observacion',
-    '#form1\\:txtObservacion',
-    'textarea[id*="observ"]',
-    'div[id*="observ"]',
-    'span[id*="observ"]',
-    'td[id*="observ"]',
-  ];
-
-  for (const sel of obsSelectors) {
-    const text = $(sel).text().trim();
-    if (text.length > 10) return text;
+async function callDetalleTitulo(
+  numero: string,
+  anio: string,
+  codigoZona: string,
+  codigoOficina: string,
+  tipoRegistro: string,
+): Promise<{ response: DetalleTituloResponse } | null> {
+  const payload = {
+    anioTitulo: anio,
+    numeroTitulo: numero,
+    codigoZona,
+    codigoOficina,
+    idAreaRegistro: codigoZona + codigoOficina,
+    tipoRegistro,
+    ip: '0.0.0.0',
+    userApp: 'sigue+',
+    userCrea: 'sigue+',
+    status: 'A',
   }
 
-  // Try to find observation text near "OBSERVADO" keyword
-  const allText = $('body').text();
-  const observMatch = allText.match(/(?:observaci[oó]n|esquela)[:\s]+(.{20,500})/i);
-  if (observMatch) return observMatch[1].trim();
+  const res = await axios.post(
+    `${TRACKING_API}/detalleTitulo`,
+    { dmFsdWU: encryptPayload(payload) },
+    { headers: API_HEADERS, timeout: 20000 },
+  )
 
-  return null;
+  const decrypted = decryptApiResponse(res.data) as { response?: DetalleTituloResponse }
+  if (!decrypted.response) return null
+  return { response: decrypted.response }
 }
 
-function extractCalificador(html: string): string | null {
-  const $ = cheerio.load(html);
+interface ConsultaTituloResponse {
+  codigoRespuesta: string
+  descripcionRespuesta: string
+  lstTitulo?: Array<{
+    estadoActual?: string
+    codEstadoActual?: string
+    areaRegistral?: string
+    tipoRegistro?: string
+    nombrePresentante?: string
+    fechaHoraPresentacion?: string
+    fechaVencimiento?: string
+    [key: string]: unknown
+  }>
+}
 
-  const calSelectors = [
-    '#form1\\:calificador',
-    '#form1\\:txtCalificador',
-    'span[id*="calific"]',
-    'td[id*="calific"]',
-  ];
-
-  for (const sel of calSelectors) {
-    const text = $(sel).text().trim();
-    if (text.length > 2) return text;
+async function callConsultaTitulo(
+  numero: string,
+  anio: string,
+  codigoZona: string,
+): Promise<{ response: ConsultaTituloResponse } | null> {
+  const payload = {
+    anioTitulo: anio,
+    numeroTitulo: numero,
+    codigoZona,
+    idioma: 'es',
   }
 
-  return null;
+  const res = await axios.post(
+    `${TRACKING_API}/consultaTitulo`,
+    { dmFsdWU: encryptPayload(payload) },
+    { headers: API_HEADERS, timeout: 20000 },
+  )
+
+  const decrypted = decryptApiResponse(res.data) as { response?: ConsultaTituloResponse }
+  if (!decrypted.response) return null
+  return { response: decrypted.response }
 }
+
+// ── Parsing logic ──────────────────────────────────────────────────────────────
+
+function parseDetalleTitulo(data: DetalleTituloResponse): {
+  estado: string
+  observacion: string
+  calificador: string
+} {
+  const events = data.lstDetalleTitulo || []
+  if (events.length === 0) {
+    return { estado: 'SIN DATOS', observacion: '', calificador: '' }
+  }
+
+  const latest = events[events.length - 1]
+
+  const rawEstado =
+    latest.descriEstadoActual ||
+    latest.estadoActual ||
+    latest.descriEvento ||
+    latest.descriEtapa ||
+    ''
+
+  const estado = classifyEstado(rawEstado)
+  const observacion = latest.observacion || ''
+  const calificador =
+    latest.descriCalificador ||
+    latest.calificador ||
+    ''
+
+  return { estado, observacion, calificador }
+}
+
+function parseConsultaTitulo(data: ConsultaTituloResponse): {
+  estado: string
+  observacion: string
+  calificador: string
+} {
+  const titulos = data.lstTitulo || []
+  if (titulos.length === 0) {
+    return { estado: 'SIN DATOS', observacion: '', calificador: '' }
+  }
+
+  const titulo = titulos[0]
+  const estado = classifyEstado(titulo.estadoActual || '')
+
+  return {
+    estado,
+    observacion: '',
+    calificador: titulo.nombrePresentante || '',
+  }
+}
+
+// ── Main scraping function ─────────────────────────────────────────────────────
 
 async function attemptScrape(
   numero: string,
   anio: string,
-  oficina: string
+  oficina: string,
+  tipo: string,
 ): Promise<SunarpResult | null> {
+  const { codigoZona, codigoOficina } = parseOficina(oficina)
+  const tipoRegistro = mapTipoRegistro(tipo)
+
+  // Primary: detalleTitulo (no CAPTCHA required)
   try {
-    // Step 1: GET the form page
-    const getResponse = await axios.get(BASE_URL, {
-      headers: HEADERS,
-      timeout: 15000,
-    });
+    const result = await callDetalleTitulo(numero, anio, codigoZona, codigoOficina, tipoRegistro)
+    if (result?.response) {
+      const code = result.response.codigoRespuesta
+      const rawJson = JSON.stringify(result.response)
 
-    const $get = cheerio.load(getResponse.data);
-    const viewState = $get('input[name="javax.faces.ViewState"]').val() as string;
+      if (code === '0000') {
+        const parsed = parseDetalleTitulo(result.response)
+        return buildResult(
+          parsed.estado, parsed.observacion, parsed.calificador,
+          false, 'detalleTitulo', code, rawJson,
+        )
+      }
 
-    if (!viewState) {
-      console.warn('[SUNARP] Could not extract ViewState from page');
-      // Try to parse what we got anyway
+      if (code === '0002') {
+        // Título not found in this office — valid response, not a portal error
+        return buildResult(
+          'SIN DATOS', result.response.descripcionRespuesta, '',
+          false, 'detalleTitulo', code, rawJson,
+        )
+      }
+
+      if (code === '0004') {
+        console.error('[SUNARP] detalleTitulo: missing required fields:', result.response.descripcionRespuesta)
+        // Fall through to consultaTitulo
+      }
     }
-
-    // Step 2: POST the form
-    const postData = new URLSearchParams({
-      'form1_SUBMIT': '1',
-      'form1:anio': anio,
-      'form1:numero': numero,
-      'form1:oficina': oficina,
-      'form1:btnConsultar': 'Consultar',
-      'javax.faces.ViewState': viewState || 'e1s1',
-    });
-
-    const postResponse = await axios.post(BASE_URL, postData.toString(), {
-      headers: {
-        ...HEADERS,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Referer: BASE_URL,
-      },
-      timeout: 20000,
-    });
-
-    const html = postResponse.data as string;
-    const estado = detectEstado(html);
-    const observacion = estado === 'OBSERVADO' ? extractObservacion(html) : null;
-    const calificador = extractCalificador(html);
-    const hash = generateHash(estado, observacion);
-
-    return {
-      estado,
-      observacion,
-      calificador,
-      hash,
-      isObservado: estado === 'OBSERVADO',
-      isInscrito: estado === 'INSCRITO',
-      isTacha: estado === 'TACHA',
-      scrapedAt: new Date().toISOString(),
-    };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error(`[SUNARP] Axios error: ${error.message} (status: ${error.response?.status})`);
-    } else {
-      console.error('[SUNARP] Unexpected error:', error);
-    }
-    return null;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[SUNARP] detalleTitulo error:', msg)
   }
-}
 
-async function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  // Fallback: consultaTitulo (requires CAPTCHA — will likely return 998)
+  try {
+    const result = await callConsultaTitulo(numero, anio, codigoZona)
+    if (result?.response) {
+      const code = result.response.codigoRespuesta
+      const rawJson = JSON.stringify(result.response)
+
+      if (code === '0000') {
+        const parsed = parseConsultaTitulo(result.response)
+        return buildResult(
+          parsed.estado, parsed.observacion, parsed.calificador,
+          false, 'consultaTitulo', code, rawJson,
+        )
+      }
+
+      if (code === '998') {
+        console.warn('[SUNARP] consultaTitulo requires CAPTCHA (expected for server-side calls)')
+        return null
+      }
+    }
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[SUNARP] consultaTitulo error:', msg)
+  }
+
+  return null
 }
 
 export async function scrapeTitulo(
   numero: string,
   anio: string,
-  oficina: string
-): Promise<SunarpResult | null> {
-  const maxAttempts = 3;
-  const delayMs = 5000;
+  oficina: string,
+  tipo: string = 'predio',
+): Promise<SunarpResult> {
+  const MAX_RETRIES = 3
+  const RETRY_DELAY = 3000
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    console.log(`[SUNARP] Attempt ${attempt}/${maxAttempts} for título ${numero}/${anio}`);
-    const result = await attemptScrape(numero, anio, oficina);
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[SUNARP] Attempt ${attempt}/${MAX_RETRIES} — ${numero}/${anio}/${oficina} (${tipo})`)
 
-    if (result !== null) {
-      console.log(`[SUNARP] Success: ${result.estado} (${result.hash})`);
-      return result;
-    }
+      const result = await attemptScrape(numero, anio, oficina, tipo)
 
-    if (attempt < maxAttempts) {
-      console.log(`[SUNARP] Waiting ${delayMs}ms before retry...`);
-      await sleep(delayMs);
+      if (result) {
+        console.log(`[SUNARP] Success — Estado: ${result.estado} [${result.codigoRespuesta}] via ${result.apiEndpoint}`)
+        return result
+      }
+
+      if (attempt < MAX_RETRIES) {
+        console.log(`[SUNARP] Attempt ${attempt} returned no result, retrying in ${RETRY_DELAY}ms...`)
+        await new Promise(r => setTimeout(r, RETRY_DELAY))
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error)
+      console.error(`[SUNARP] Attempt ${attempt} error:`, msg)
+
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, RETRY_DELAY * attempt))
+      }
     }
   }
 
-  console.error(`[SUNARP] All ${maxAttempts} attempts failed for ${numero}/${anio}`);
-  return null;
+  console.error('[SUNARP] All attempts failed — portal down or CAPTCHA blocked')
+  return buildResult('SIN DATOS', '', '', true, 'none', '', undefined)
+}
+
+// ── Oficinas lookup ────────────────────────────────────────────────────────────
+
+export interface SunarpOficina {
+  codigoZona: string
+  codigoOficina: string
+  nombreOficina: string
+}
+
+let oficinasCache: SunarpOficina[] | null = null
+
+export async function getOficinas(): Promise<SunarpOficina[]> {
+  if (oficinasCache) return oficinasCache
+
+  const res = await axios.get(`${OFICINAS_API}/cboOficinasSiguelo/1`, {
+    headers: API_HEADERS,
+    timeout: 15000,
+  })
+
+  const data = res.data as { lstOficinas?: SunarpOficina[] }
+  oficinasCache = data.lstOficinas || []
+  return oficinasCache
+}
+
+// ── Test helper ────────────────────────────────────────────────────────────────
+
+export async function testSunarp(
+  numero: string = '001234',
+  anio: string = '2024',
+  oficina: string = '0101',
+  tipo: string = 'predio',
+) {
+  console.log('Testing SUNARP scraper...')
+  console.log(`Parameters: ${numero}/${anio}/${oficina} (${tipo})`)
+
+  try {
+    const oficinas = await getOficinas()
+    console.log(`Loaded ${oficinas.length} oficinas`)
+  } catch (e) {
+    console.log('Could not load oficinas (non-fatal)')
+  }
+
+  const result = await scrapeTitulo(numero, anio, oficina, tipo)
+  console.log('Result:', JSON.stringify(result, null, 2))
+  return result
+}
+
+if (require.main === module) {
+  testSunarp()
 }

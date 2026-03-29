@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const tramite = createTramite(body);
 
     // Run first poll immediately (non-blocking)
-    scrapeTitulo(tramite.numero_titulo, tramite.anio, tramite.oficina_registral)
+    scrapeTitulo(tramite.numero_titulo, tramite.anio, tramite.oficina_registral, tramite.tipo)
       .then(result => {
         if (result) {
           updateTramite(tramite.id, {

@@ -1,4 +1,8 @@
-import { getTramiteById, updateTramite, deleteTramite, getHistorialByTramite, getPlazos, getNotificationsByTramite } from '@/lib/db';
+import {
+  getTramiteById, updateTramite, deleteTramite,
+  archiveTramite, restoreTramite, permanentDeleteTramite,
+  getHistorialByTramite, getPlazos, getNotificationsByTramite
+} from '@/lib/db';
 
 export async function GET(
   _request: Request,
@@ -46,6 +50,37 @@ export async function PUT(
   } catch (error) {
     console.error('[API] PUT /tramites/[id] error:', error);
     return Response.json({ error: 'Error al actualizar trámite' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const tramiteId = parseInt(id);
+    const body = await request.json() as { action: string };
+
+    switch (body.action) {
+      case 'archive':
+        archiveTramite(tramiteId);
+        return Response.json({ success: true, message: 'Trámite archivado' });
+      case 'restore':
+        restoreTramite(tramiteId);
+        return Response.json({ success: true, message: 'Trámite restaurado' });
+      case 'soft-delete':
+        deleteTramite(tramiteId);
+        return Response.json({ success: true, message: 'Trámite enviado a eliminados' });
+      case 'permanent-delete':
+        permanentDeleteTramite(tramiteId);
+        return Response.json({ success: true, message: 'Trámite eliminado permanentemente' });
+      default:
+        return Response.json({ error: 'Acción no válida' }, { status: 400 });
+    }
+  } catch (error) {
+    console.error('[API] PATCH /tramites/[id] error:', error);
+    return Response.json({ error: 'Error al procesar acción' }, { status: 500 });
   }
 }
 

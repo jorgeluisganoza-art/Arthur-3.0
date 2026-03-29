@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
 import AddTramiteDrawer from '@/components/AddTramiteDrawer';
@@ -69,9 +69,17 @@ const IconCar = () => (
   </svg>
 );
 
+const IconScroll = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <path d="M4 2h8a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />
+    <path d="M6 5h4M6 8h4M6 11h2" />
+  </svg>
+);
+
 function TipoIcon({ tipo }: { tipo: string }) {
   if (tipo === 'empresa') return <IconBuilding />;
   if (tipo === 'vehiculo') return <IconCar />;
+  if (tipo === 'mandatos') return <IconScroll />;
   return <IconHouse />;
 }
 
@@ -80,6 +88,7 @@ function tipoText(tipo: string): string {
     predio: 'Predio',
     empresa: 'Empresa',
     vehiculo: 'Vehículo',
+    mandatos: 'Mandatos',
   };
   return labels[tipo] || tipo;
 }
@@ -91,6 +100,21 @@ export default function DashboardPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pollingId, setPollingId] = useState<number | null>(null);
   const [pollStatus, setPollStatus] = useState<Record<number, { step: string; result?: PollResult }>>({});
+  const [menuOpen, setMenuOpen] = useState<number | null>(null);
+
+  const actionsBtnBase: CSSProperties = {
+    background: 'transparent',
+    border: '1px solid rgba(15,15,15,0.15)',
+    borderRadius: 0,
+    padding: '6px 12px',
+    fontFamily: 'DM Mono, monospace',
+    fontSize: '10px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: 'var(--ink)',
+    cursor: 'pointer',
+    transition: 'background 0.15s, color 0.15s',
+  };
 
   async function loadData() {
     try {
@@ -144,6 +168,30 @@ export default function DashboardPage() {
           return next;
         });
       }, 5000);
+    }
+  }
+
+  async function handleAction(tramiteId: number, action: 'archive' | 'soft-delete') {
+    if (action === 'soft-delete') {
+      const ok = window.confirm(
+        '¿Enviar este trámite a Eliminados? Dejará de aparecer en Mis Trámites. Se borrará del sistema en 30 días (puedes restaurarlo antes desde el menú Eliminados).'
+      );
+      if (!ok) return;
+    }
+    try {
+      const res = await fetch(`/api/tramites/${tramiteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) {
+        console.error('PATCH tramite error', await res.text());
+        return;
+      }
+      setMenuOpen(null);
+      await loadData();
+    } catch (err) {
+      console.error('Error:', err);
     }
   }
 
@@ -243,11 +291,11 @@ export default function DashboardPage() {
       )}
 
       {/* Table */}
-      <div style={{ marginTop: '32px', background: 'white', border: '1px solid rgba(15,15,15,0.08)' }}>
+      <div style={{ marginTop: '32px', background: 'white', border: '1px solid rgba(15,15,15,0.08)', overflow: 'visible', position: 'relative', zIndex: 0 }}>
         {/* Header */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '140px 120px 1fr 140px 160px 140px',
+          gridTemplateColumns: '140px 120px 1fr 140px 160px 180px',
           background: 'var(--paper-dark)',
           padding: '12px 24px',
           fontFamily: 'DM Mono, monospace',
@@ -293,9 +341,9 @@ export default function DashboardPage() {
                 className="fade-row"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '140px 120px 1fr 140px 160px 140px',
+                  gridTemplateColumns: '140px 120px 1fr 140px 160px 180px',
                   padding: '0 24px',
-                  height: '64px',
+                  minHeight: '64px',
                   alignItems: 'center',
                   borderBottom: '1px solid rgba(15,15,15,0.06)',
                   borderLeft: isObservado ? '3px solid #991b1b' : '3px solid transparent',
@@ -303,6 +351,8 @@ export default function DashboardPage() {
                   gap: '16px',
                   animationDelay: `${idx * 50}ms`,
                   transition: 'background 0.3s',
+                  overflow: 'visible',
+                  ...(menuOpen === t.id ? { position: 'relative', zIndex: 400 } : {}),
                 }}
               >
                 <div><StatusBadge estado={t.estado_actual} /></div>
@@ -334,29 +384,110 @@ export default function DashboardPage() {
                     relativeTime(t.last_checked)
                   )}
                 </div>
-                <div>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <button
+                    type="button"
                     onClick={() => handlePollNow(t.id)}
                     disabled={isPolling}
+                    title="Consultar estado en SUNARP"
                     style={{
-                      background: 'transparent',
-                      border: '1px solid rgba(15,15,15,0.15)',
-                      borderRadius: 0,
-                      padding: '6px 14px',
-                      fontFamily: 'DM Mono, monospace',
-                      fontSize: '10px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                      color: 'var(--ink)',
+                      ...actionsBtnBase,
                       cursor: isPolling ? 'not-allowed' : 'pointer',
                       opacity: isPolling ? 0.6 : 1,
-                      transition: 'background 0.15s, color 0.15s',
                     }}
-                    onMouseOver={e => { if (!isPolling) { (e.currentTarget as HTMLButtonElement).style.background = 'var(--ink)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--paper)'; }}}
-                    onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--ink)'; }}
+                    onMouseOver={e => { if (!isPolling) { e.currentTarget.style.background = 'var(--ink)'; e.currentTarget.style.color = 'var(--paper)'; }}}
+                    onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--ink)'; }}
                   >
-                    {isPolling ? 'Consultando...' : 'Revisar ahora'}
+                    {isPolling ? '...' : 'Revisar'}
                   </button>
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setMenuOpen(menuOpen === t.id ? null : t.id);
+                      }}
+                      aria-expanded={menuOpen === t.id}
+                      aria-haspopup="true"
+                      title="Más acciones"
+                      style={{
+                        ...actionsBtnBase,
+                        padding: '6px 10px',
+                        color: 'var(--muted)',
+                        letterSpacing: '0.12em',
+                      }}
+                    >
+                      ···
+                    </button>
+                    {menuOpen === t.id && (
+                      <>
+                        <div
+                          role="presentation"
+                          onClick={() => setMenuOpen(null)}
+                          style={{ position: 'fixed', inset: 0, zIndex: 450 }}
+                        />
+                        <div
+                          role="menu"
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: '100%',
+                            marginTop: '4px',
+                            background: 'white',
+                            border: '1px solid rgba(15,15,15,0.1)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                            zIndex: 460,
+                            minWidth: '168px',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleAction(t.id, 'archive')}
+                            style={{
+                              width: '100%',
+                              padding: '10px 16px',
+                              background: 'none',
+                              border: 'none',
+                              fontFamily: 'DM Mono, monospace',
+                              fontSize: '10px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.08em',
+                              color: 'var(--ink)',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                            }}
+                            onMouseOver={e => { e.currentTarget.style.background = 'var(--paper-dark)'; }}
+                            onMouseOut={e => { e.currentTarget.style.background = 'none'; }}
+                          >
+                            Archivar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAction(t.id, 'soft-delete')}
+                            style={{
+                              width: '100%',
+                              padding: '10px 16px',
+                              background: 'none',
+                              border: 'none',
+                              borderTop: '1px solid rgba(15,15,15,0.06)',
+                              fontFamily: 'DM Mono, monospace',
+                              fontSize: '10px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.08em',
+                              color: '#991b1b',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                            }}
+                            onMouseOver={e => { e.currentTarget.style.background = 'rgba(153,27,27,0.04)'; }}
+                            onMouseOut={e => { e.currentTarget.style.background = 'none'; }}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             );
