@@ -17,7 +17,6 @@ export default function LandingPage() {
     <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
       <AnimatedBackground />
 
-      {/* Content */}
       <div
         style={{
           position: 'relative',
@@ -31,25 +30,6 @@ export default function LandingPage() {
           padding: '0 24px',
         }}
       >
-        {/* Top label */}
-        <div
-          style={{
-            fontFamily: 'DM Mono, monospace',
-            fontSize: '11px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.2em',
-            color: 'rgba(255,255,255,0.45)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            padding: '6px 16px',
-            borderRadius: '2px',
-            marginBottom: '48px',
-            animation: 'fadeUp 0.6s ease forwards',
-          }}
-        >
-          AI-powered · SUNARP · Perú
-        </div>
-
-        {/* Main headline */}
         <h1
           style={{
             fontFamily: 'DM Serif Display, serif',
@@ -61,45 +41,27 @@ export default function LandingPage() {
             lineHeight: 1,
             margin: 0,
             animation: 'fadeUp 0.8s ease forwards',
-            animationDelay: '100ms',
-            opacity: 0,
           }}
         >
           arthur
         </h1>
 
-        {/* Decorative rule */}
-        <div
-          style={{
-            width: '60px',
-            height: '1px',
-            background: 'rgba(255,255,255,0.3)',
-            margin: '28px auto',
-            animation: 'fadeUp 0.8s ease forwards',
-            animationDelay: '200ms',
-            opacity: 0,
-          }}
-        />
-
-        {/* Subtitle */}
         <p
           style={{
             fontFamily: 'Inter, sans-serif',
             fontSize: 'clamp(16px, 2vw, 20px)',
             fontWeight: 300,
-            color: 'rgba(255,255,255,0.7)',
+            color: 'rgba(255,255,255,0.6)',
             lineHeight: 1.6,
-            maxWidth: '480px',
-            margin: '0 0 56px 0',
+            margin: '24px 0 56px 0',
             animation: 'fadeUp 0.8s ease forwards',
-            animationDelay: '300ms',
+            animationDelay: '150ms',
             opacity: 0,
           }}
         >
-          Tu asistente legal inteligente para SUNARP
+          asistente legal
         </p>
 
-        {/* CTA Button */}
         <button
           onClick={() => router.push('/login')}
           style={{
@@ -116,7 +78,7 @@ export default function LandingPage() {
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             animation: 'fadeUp 0.8s ease forwards',
-            animationDelay: '400ms',
+            animationDelay: '300ms',
             opacity: 0,
           }}
           onMouseOver={e => {
@@ -130,26 +92,8 @@ export default function LandingPage() {
         >
           Empieza ahora →
         </button>
-
-        {/* Trust line */}
-        <div
-          style={{
-            fontFamily: 'DM Mono, monospace',
-            fontSize: '10px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            color: 'rgba(255,255,255,0.3)',
-            marginTop: '32px',
-            animation: 'fadeUp 0.8s ease forwards',
-            animationDelay: '500ms',
-            opacity: 0,
-          }}
-        >
-          Seguimiento automático · Alertas en tiempo real · Redacción con IA
-        </div>
       </div>
 
-      {/* Footer */}
       <div
         style={{
           position: 'absolute',
@@ -165,7 +109,7 @@ export default function LandingPage() {
           color: 'rgba(255,255,255,0.2)',
         }}
       >
-        ARTHUR · 2026
+        Arthur — 2026
       </div>
     </div>
   );
