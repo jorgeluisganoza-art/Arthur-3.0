@@ -32,6 +32,13 @@ const IconBell = () => (
   </svg>
 );
 
+const IconChat = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 2.5h12a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-.5.5H5L2 14V3a.5.5 0 0 1 .5-.5z" />
+    <path d="M5 6h6M5 8.5h4" />
+  </svg>
+);
+
 export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
   const pathname = usePathname();
   const [count, setCount] = useState(observadosCount);
@@ -47,6 +54,7 @@ export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
     { href: '/dashboard', label: 'Mis Trámites', hasAlert: count > 0, Icon: IconGrid },
     { href: '/dashboard/agenda', label: 'Agenda de Plazos', hasAlert: false, Icon: IconCalendar },
     { href: '/dashboard/alertas', label: 'Alertas', hasAlert: false, Icon: IconBell },
+    { href: '/dashboard/chat', label: 'Consulta Legal', hasAlert: false, Icon: IconChat },
   ];
 
   const isActive = (href: string) => {
