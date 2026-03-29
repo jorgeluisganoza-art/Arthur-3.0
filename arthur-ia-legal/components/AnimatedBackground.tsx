@@ -91,20 +91,18 @@ void main() {
   float n = domainWarp(coord, uTime * 0.09);
   n = (n + 1.0) * 0.5;
 
-  // Halftone dot matrix — finer dots at smaller scale for dense sand texture
-  float dotScale = mix(55.0, 95.0, smoothstep(0.0, 1.0, uResolution.x / 1920.0));
+  float dotScale = mix(28.0, 48.0, smoothstep(0.0, 1.0, uResolution.x / 1920.0));
   vec2 dotUV = gl_FragCoord.xy / dotScale;
-  vec2 cell = floor(dotUV);
   vec2 local = fract(dotUV) - 0.5;
 
   float dist = length(local);
-  float radius = n * 0.48;
-  float dot = 1.0 - smoothstep(radius - 0.03, radius + 0.05, dist);
+  float radius = n * 0.28;
+  float dot = 1.0 - smoothstep(radius - 0.02, radius + 0.03, dist);
 
-  vec3 bgColor  = vec3(0.05, 0.15, 0.10);   // deep forest green
-  vec3 dotColor = vec3(0.45, 0.75, 0.55);  // bright sage green
+  vec3 bgColor  = vec3(0.04, 0.12, 0.08);
+  vec3 dotColor = vec3(0.22, 0.38, 0.28);
 
-  dotColor = mix(dotColor, vec3(0.65, 0.90, 0.72), n * 0.4);
+  dotColor = mix(dotColor, vec3(0.30, 0.50, 0.36), n * 0.3);
 
   vec3 color = mix(bgColor, dotColor, dot);
 
