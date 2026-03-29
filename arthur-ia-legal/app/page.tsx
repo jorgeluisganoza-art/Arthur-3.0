@@ -50,7 +50,7 @@ export default function LandingPage() {
               fontFamily: 'DM Serif Display, serif',
               fontStyle: 'italic',
               fontSize: 'clamp(72px, 10vw, 120px)',
-              color: '#4ae08c',
+              color: '#ffffff',
               fontWeight: 400,
               letterSpacing: '-0.02em',
               lineHeight: 1,
@@ -58,7 +58,7 @@ export default function LandingPage() {
               transition: 'opacity 0.35s ease, transform 0.35s ease, text-shadow 0.35s ease',
               opacity: hovered ? 0 : 1,
               transform: hovered ? 'scale(0.95)' : 'scale(1)',
-              textShadow: '0 0 40px rgba(74, 224, 140, 0.3)',
+              textShadow: '0 0 40px rgba(255, 255, 255, 0.2)',
             }}
           >
             arthur
@@ -72,12 +72,12 @@ export default function LandingPage() {
               fontWeight: 500,
               textTransform: 'uppercase',
               letterSpacing: '0.15em',
-              color: '#4ae08c',
+              color: '#ffffff',
               transition: 'opacity 0.35s ease, transform 0.35s ease',
               opacity: hovered ? 1 : 0,
               transform: hovered ? 'scale(1)' : 'scale(1.05)',
               padding: '22px 52px',
-              border: '1px solid rgba(74, 224, 140, 0.35)',
+              border: '1px solid rgba(255,255,255,0.35)',
               whiteSpace: 'nowrap',
             }}
           >
@@ -98,7 +98,7 @@ export default function LandingPage() {
           fontSize: '10px',
           textTransform: 'uppercase',
           letterSpacing: '0.15em',
-          color: 'rgba(74, 224, 140, 0.25)',
+          color: 'rgba(255,255,255,0.25)',
         }}
       >
         Arthur &mdash; 2026
