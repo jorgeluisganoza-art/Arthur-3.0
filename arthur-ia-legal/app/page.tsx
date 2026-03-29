@@ -59,7 +59,7 @@ export default function LandingPage() {
             opacity: 0,
           }}
         >
-          asistente legal
+          Asistente Legal Avanzado
         </p>
 
         <button

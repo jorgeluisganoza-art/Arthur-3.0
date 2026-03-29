@@ -22,7 +22,7 @@ export default function AnimatedBackground() {
     window.addEventListener('resize', resize);
 
     const animate = () => {
-      time += 0.015;
+      time += 0.025;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const w = canvas.width;
@@ -43,14 +43,14 @@ export default function AnimatedBackground() {
           const wave3 = Math.cos(col * 0.07 + row * 0.1 + time * 0.5) * 0.4;
           const combined = wave1 + wave2 + wave3;
 
-          const dx = Math.sin(col * 0.2 + time * 1.5 + row * 0.05) * spacingX * 0.35;
-          const dy = Math.cos(row * 0.15 + time * 0.8 + col * 0.1) * spacingY * 0.3;
+          const dx = Math.sin(col * 0.2 + time * 1.5 + row * 0.05) * spacingX * 0.55;
+          const dy = Math.cos(row * 0.15 + time * 0.8 + col * 0.1) * spacingY * 0.5;
 
           const x = baseX + dx;
           const y = baseY + dy;
 
-          const radius = Math.max(0.3, 2 + combined * 1.5);
-          const opacity = Math.min(0.6, Math.max(0.05, 0.15 + combined * 0.18));
+          const radius = Math.max(0.3, 2.5 + combined * 2);
+          const opacity = Math.min(0.7, Math.max(0.05, 0.18 + combined * 0.22));
 
           ctx.beginPath();
           ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -113,7 +113,7 @@ export default function AnimatedBackground() {
           height: '100%',
           zIndex: 1,
           background:
-            'linear-gradient(135deg, rgba(15,45,30,0.88) 0%, rgba(20,55,35,0.82) 50%, rgba(10,35,22,0.90) 100%)',
+            'linear-gradient(135deg, rgba(15,45,30,0.84) 0%, rgba(20,55,35,0.78) 50%, rgba(10,35,22,0.86) 100%)',
           pointerEvents: 'none',
         }}
       />
