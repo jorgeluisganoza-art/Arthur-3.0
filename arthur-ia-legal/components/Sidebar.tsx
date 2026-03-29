@@ -77,11 +77,11 @@ export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
           <div
             style={{
               fontFamily: 'DM Serif Display, serif',
-              fontSize: '64px',
+              fontSize: '36px',
               color: 'white',
               fontStyle: 'italic',
               lineHeight: 1,
-              letterSpacing: '2px',
+              letterSpacing: '0.5px',
             }}
           >
             arthur
