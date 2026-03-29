@@ -20,6 +20,8 @@ interface Tramite {
   polling_frequency_hours: number;
   last_checked: string | null;
   created_at: string;
+  archived_at: string | null;
+  deleted_at: string | null;
 }
 
 interface Historial {
@@ -120,12 +122,27 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
   const [demoStep, setDemoStep] = useState<string | null>(null);
   const [demoResult, setDemoResult] = useState<PollResult | null>(null);
   const [suggestion, setSuggestion] = useState('');
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   async function loadTramite() {
-    const res = await fetch(`/api/tramites/${id}`);
-    if (res.ok) {
-      const data = await res.json() as TramiteDetail;
-      setTramite(data);
+    setFetchError(null);
+    try {
+      const res = await fetch(`/api/tramites/${id}`);
+      if (res.ok) {
+        const data = await res.json() as TramiteDetail;
+        setTramite(data);
+      } else {
+        setTramite(null);
+        try {
+          const j = (await res.json()) as { error?: string };
+          setFetchError(j.error ?? `Error ${res.status}`);
+        } catch {
+          setFetchError(`Error ${res.status}`);
+        }
+      }
+    } catch {
+      setTramite(null);
+      setFetchError('No se pudo conectar con el servidor');
     }
     setLoading(false);
   }
@@ -240,13 +257,28 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
         <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: 'var(--ink)' }}>
           Trámite no encontrado
         </div>
-        <Link href="/dashboard" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', color: 'var(--muted)' }}>
-          ← Volver
-        </Link>
+        {fetchError && (
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'var(--muted)', marginTop: '12px', maxWidth: '520px', lineHeight: 1.6 }}>
+            {fetchError}. Puede que el enlace sea antiguo, el caso se haya purgado o —en un servidor nuevo— la base de datos esté vacía.
+          </p>
+        )}
+        <div style={{ marginTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+          <Link href="/dashboard" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', color: 'var(--muted)' }}>
+            ← Mis trámites
+          </Link>
+          <Link href="/dashboard/archivados" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', color: 'var(--muted)' }}>
+            Archivados
+          </Link>
+          <Link href="/dashboard/eliminados" style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', color: 'var(--muted)' }}>
+            Eliminados
+          </Link>
+        </div>
       </div>
     );
   }
 
+  const isDeleted = Boolean(tramite.deleted_at);
+  const isArchived = Boolean(tramite.archived_at) && !isDeleted;
   const needsAction = tramite.estado_actual === 'OBSERVADO' || tramite.estado_actual === 'TACHA';
   const statusColor = getStatusColor(tramite.estado_actual);
 
@@ -259,6 +291,38 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
       >
         ← Mis Trámites
       </Link>
+
+      {isDeleted && (
+        <div style={{
+          background: 'rgba(153,27,27,0.08)',
+          border: '1px solid rgba(153,27,27,0.25)',
+          padding: '14px 20px',
+          marginBottom: '16px',
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '14px',
+          color: 'var(--ink)',
+        }}>
+          Este trámite está en la <strong>papelera</strong>. Puedes restaurarlo desde{' '}
+          <Link href="/dashboard/eliminados" style={{ color: '#991b1b', fontWeight: 600 }}>Eliminados</Link>.
+          La consulta automática a SUNARP no está disponible hasta restaurarlo.
+        </div>
+      )}
+
+      {isArchived && (
+        <div style={{
+          background: 'rgba(26,61,43,0.06)',
+          border: '1px solid rgba(26,61,43,0.2)',
+          padding: '14px 20px',
+          marginBottom: '16px',
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '14px',
+          color: 'var(--ink)',
+        }}>
+          Trámite <strong>archivado</strong>. Sigue en{' '}
+          <Link href="/dashboard/archivados" style={{ color: 'var(--accent)', fontWeight: 600 }}>Archivados</Link>
+          {' '}y puedes seguir revisando el estado aquí.
+        </div>
+      )}
 
       {/* Header — z-index when menu open so dropdown is not covered by cards below (fadeUp uses transform) */}
       <div
@@ -281,11 +345,12 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           <button
             type="button"
             onClick={handleDemo}
-            disabled={!!demoStep || caseActionBusy}
+            disabled={!!demoStep || caseActionBusy || isDeleted}
+            title={isDeleted ? 'Restaura el trámite desde Eliminados para consultar SUNARP' : undefined}
             style={{
               ...headerActionBtn,
-              cursor: demoStep || caseActionBusy ? 'not-allowed' : 'pointer',
-              opacity: demoStep || caseActionBusy ? 0.7 : 1,
+              cursor: demoStep || caseActionBusy || isDeleted ? 'not-allowed' : 'pointer',
+              opacity: demoStep || caseActionBusy || isDeleted ? 0.7 : 1,
             }}
           >
             {demoStep ? demoStep : 'Revisar ahora'}
@@ -297,7 +362,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
                 e.stopPropagation();
                 setDetailMenuOpen(v => !v);
               }}
-              disabled={caseActionBusy || !!demoStep}
+              disabled={caseActionBusy || !!demoStep || isDeleted}
               aria-expanded={detailMenuOpen}
               aria-haspopup="true"
               title="Más acciones"
@@ -306,8 +371,8 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
                 padding: '10px 16px',
                 color: 'var(--muted)',
                 letterSpacing: '0.12em',
-                cursor: caseActionBusy || demoStep ? 'not-allowed' : 'pointer',
-                opacity: caseActionBusy || demoStep ? 0.6 : 1,
+                cursor: caseActionBusy || demoStep || isDeleted ? 'not-allowed' : 'pointer',
+                opacity: caseActionBusy || demoStep || isDeleted ? 0.6 : 1,
               }}
             >
               ···
@@ -425,6 +490,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           <select
             value={tramite.tipo}
             onChange={e => { void handleTipoChange(e.target.value); }}
+            disabled={isDeleted}
             style={{
               fontFamily: 'Inter, sans-serif',
               fontSize: '13px',
@@ -432,7 +498,8 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
               border: '1px solid rgba(15,15,15,0.15)',
               minWidth: '280px',
               background: 'white',
-              cursor: 'pointer',
+              cursor: isDeleted ? 'not-allowed' : 'pointer',
+              opacity: isDeleted ? 0.65 : 1,
             }}
           >
             {TIPO_SEGUIMIENTO_OPTIONS.map(o => (

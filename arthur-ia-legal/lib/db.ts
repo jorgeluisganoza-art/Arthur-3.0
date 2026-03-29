@@ -232,6 +232,11 @@ export function getTramiteById(id: number): Tramite | null {
   ).get(id) as Tramite | null;
 }
 
+/** Fila por id aunque esté en papelera (soft-delete); no existe si fue purgado del SQLite. */
+export function findTramiteById(id: number): Tramite | null {
+  return getDb().prepare('SELECT * FROM tramites WHERE id = ?').get(id) as Tramite | null;
+}
+
 export function getArchivedTramites(): Tramite[] {
   return getDb().prepare(
     'SELECT * FROM tramites WHERE archived_at IS NOT NULL AND deleted_at IS NULL ORDER BY archived_at DESC'

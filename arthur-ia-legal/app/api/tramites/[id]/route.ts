@@ -1,5 +1,5 @@
 import {
-  getTramiteById, updateTramite, deleteTramite,
+  getTramiteById, findTramiteById, updateTramite, deleteTramite,
   archiveTramite, restoreTramite, permanentDeleteTramite,
   getHistorialByTramite, getPlazos, getNotificationsByTramite
 } from '@/lib/db';
@@ -12,8 +12,12 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const tramiteId = parseInt(id);
-    const tramite = getTramiteById(tramiteId);
+    const tramiteId = Number.parseInt(id, 10);
+    if (!Number.isFinite(tramiteId)) {
+      return Response.json({ error: 'ID de trámite no válido' }, { status: 400 });
+    }
+
+    const tramite = findTramiteById(tramiteId);
 
     if (!tramite) {
       return Response.json({ error: 'Trámite no encontrado' }, { status: 404 });

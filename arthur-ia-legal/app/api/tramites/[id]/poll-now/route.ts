@@ -12,9 +12,10 @@ export async function POST(
 
   try {
     // 1. Get tramite from DB
+    // Archivados tienen activo = 0; deben poder abrirse y revisarse. Excluir solo papelera (soft-delete).
     const tramite = db.prepare(
-      'SELECT * FROM tramites WHERE id = ? AND activo = 1'
-    ).get(tramiteId) as any
+      'SELECT * FROM tramites WHERE id = ? AND deleted_at IS NULL'
+    ).get(tramiteId) as Record<string, unknown> | undefined
 
     if (!tramite) {
       return NextResponse.json(
@@ -25,17 +26,17 @@ export async function POST(
 
     // 2. Scrape SUNARP (tipo is needed for the API's tipoRegistro field)
     const result = await scrapeTitulo(
-      tramite.numero_titulo,
-      tramite.anio,
-      tramite.oficina_registral,
-      tramite.tipo
+      String(tramite.numero_titulo ?? ''),
+      String(tramite.anio ?? ''),
+      String(tramite.oficina_registral ?? ''),
+      String(tramite.tipo ?? 'predio')
     )
 
     // 3. If portal is down, return gracefully
     if (result.portalDown) {
       return NextResponse.json({
         changed: false,
-        estado: tramite.estado_actual,
+        estado: String(tramite.estado_actual ?? ''),
         portalDown: true,
         message: 'Portal SUNARP no disponible. Mostrando último estado conocido.',
         lastChecked: tramite.last_checked
@@ -43,7 +44,7 @@ export async function POST(
     }
 
     // 4. Check if anything changed
-    const hasChanged = result.hash !== tramite.estado_hash && result.hash !== ''
+    const hasChanged = result.hash !== String(tramite.estado_hash ?? '') && result.hash !== ''
 
     // 5. Always update last_checked
     db.prepare(`
