@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState, use, type CSSProperties } from 'react';
+import { useEffect, useState, use, useRef, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import StatusBadge from '@/components/StatusBadge';
 import CalendarButtons from '@/components/CalendarButtons';
+import { SUNARP_TURNSTILE_SITE_KEY } from '@/lib/sunarp-turnstile';
 
 interface Tramite {
   id: number;
@@ -123,6 +125,9 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
   const [demoResult, setDemoResult] = useState<PollResult | null>(null);
   const [suggestion, setSuggestion] = useState('');
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileError, setTurnstileError] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
 
   async function loadTramite() {
     setFetchError(null);
@@ -164,11 +169,19 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
     await new Promise(r => setTimeout(r, 1000));
 
     try {
-      const res = await fetch(`/api/tramites/${id}/poll-now`, { method: 'POST' });
+      const res = await fetch(`/api/tramites/${id}/poll-now`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          turnstileToken ? { turnstileToken } : {},
+        ),
+      });
       const result = await res.json() as PollResult;
       setDemoResult(result);
       setSuggestion(result.suggestion || '');
       await loadTramite();
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } catch {
       setDemoResult({ changed: false, estado: '', suggestion: '', error: 'Error de conexión', notificacionesEnviadas: { whatsapp: false, email: false } });
     } finally {
@@ -321,6 +334,41 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           Trámite <strong>archivado</strong>. Sigue en{' '}
           <Link href="/dashboard/archivados" style={{ color: 'var(--accent)', fontWeight: 600 }}>Archivados</Link>
           {' '}y puedes seguir revisando el estado aquí.
+        </div>
+      )}
+
+      {!isDeleted && (
+        <div style={{
+          marginBottom: '20px',
+          padding: '14px 18px',
+          border: '1px solid rgba(15,15,15,0.1)',
+          background: 'rgba(15,15,15,0.02)',
+        }}>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: '10px' }}>
+            Verificación SUNARP (igual que Síguelo Plus)
+          </div>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--muted)', lineHeight: 1.5, margin: '0 0 12px' }}>
+            Completa la comprobación y luego usa <strong>Revisar ahora</strong>. Si el recuadro no carga, el site key de SUNARP puede estar limitado a su dominio: igual puedes intentar la revisión sin token.
+          </p>
+          <Turnstile
+            ref={turnstileRef}
+            siteKey={SUNARP_TURNSTILE_SITE_KEY}
+            options={{ size: 'normal', theme: 'auto', language: 'es' }}
+            onSuccess={token => {
+              setTurnstileToken(token);
+              setTurnstileError(null);
+            }}
+            onExpire={() => setTurnstileToken(null)}
+            onError={code => {
+              setTurnstileToken(null);
+              setTurnstileError(`Turnstile: ${code}`);
+            }}
+          />
+          {turnstileError && (
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#991b1b', margin: '10px 0 0' }}>
+              {turnstileError}
+            </p>
+          )}
         </div>
       )}
 
@@ -748,7 +796,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
       {/* Demo Button */}
       <button
         onClick={handleDemo}
-        disabled={!!demoStep}
+        disabled={!!demoStep || caseActionBusy || isDeleted}
         style={{
           width: '100%',
           background: 'var(--ink)',
@@ -759,7 +807,8 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           fontFamily: 'DM Serif Display, serif',
           fontStyle: 'italic',
           fontSize: '20px',
-          cursor: demoStep ? 'not-allowed' : 'pointer',
+          cursor: demoStep || caseActionBusy || isDeleted ? 'not-allowed' : 'pointer',
+          opacity: demoStep || caseActionBusy || isDeleted ? 0.7 : 1,
           marginTop: '16px',
         }}
       >

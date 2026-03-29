@@ -3,12 +3,22 @@ import { scrapeTitulo } from '@/lib/sunarp-scraper'
 import getDb from '@/lib/db'
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
   const db = getDb()
-  const tramiteId = parseInt(id)
+  const tramiteId = Number.parseInt(id, 10)
+
+  let turnstileToken: string | undefined
+  try {
+    const body = (await request.json()) as { turnstileToken?: string }
+    if (typeof body?.turnstileToken === 'string' && body.turnstileToken.trim()) {
+      turnstileToken = body.turnstileToken.trim()
+    }
+  } catch {
+    /* cuerpo vacío o no JSON */
+  }
 
   try {
     // 1. Get tramite from DB
@@ -29,7 +39,8 @@ export async function POST(
       String(tramite.numero_titulo ?? ''),
       String(tramite.anio ?? ''),
       String(tramite.oficina_registral ?? ''),
-      String(tramite.tipo ?? 'predio')
+      String(tramite.tipo ?? 'predio'),
+      turnstileToken,
     )
 
     // 3. If portal is down, return gracefully

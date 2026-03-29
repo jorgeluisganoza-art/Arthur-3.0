@@ -227,20 +227,29 @@ async function callConsultaTitulo(
   anio: string,
   codigoZona: string,
   codigoOficina: string,
+  turnstileToken?: string | null,
 ): Promise<{ response: ConsultaTituloResponse } | null> {
-  const payload = {
+  // Misma forma que Síguelo Plus (Angular): token CAPTCHA en clave literal dG9rZW4 (= "token" en base64).
+  const payload: Record<string, unknown> = {
     anioTitulo: anio,
     numeroTitulo: numero,
     codigoZona,
     codigoOficina,
     idAreaRegistro: codigoZona + codigoOficina,
+    ip: '0.0.0.0',
+    userApp: 'sigue+',
+    userCrea: 'sigue+',
+    status: 'A',
+    tipoConsulta: 'N',
     idioma: 'es',
   }
+  const tok = turnstileToken?.trim()
+  if (tok) payload.dG9rZW4 = tok
 
   const res = await axios.post(
     `${TRACKING_API}/consultaTitulo`,
     { dmFsdWU: encryptPayload(payload) },
-    { headers: API_HEADERS, timeout: 20000 },
+    { headers: API_HEADERS, timeout: 25000 },
   )
 
   const decrypted = decryptApiResponse(res.data) as { response?: ConsultaTituloResponse }
@@ -306,6 +315,7 @@ async function attemptScrape(
   anio: string,
   oficina: string,
   tipo: string,
+  turnstileToken?: string | null,
 ): Promise<SunarpResult | null> {
   const { codigoZona, codigoOficina } = parseOficina(oficina)
   const userTipoCode = mapTipoRegistro(tipo)
@@ -348,29 +358,39 @@ async function attemptScrape(
     }
   }
 
-  // Tras agotar detalleTitulo: intentar consultaTitulo (a veces responde sin token si el payload incluye oficina).
+  // Tras detalleTitulo: consultaTitulo con token Turnstile (mismo flujo que la web) o sin token (sí devuelve 998).
   const numeroNorm = normalizeNumeroTitulo(numero)
-  try {
-    const result = await callConsultaTitulo(numeroNorm, anio, codigoZona, codigoOficina)
-    if (result?.response) {
-      const code = result.response.codigoRespuesta
-      const rawJson = JSON.stringify(result.response)
+  const consultaAttempts: Array<string | null | undefined> = turnstileToken?.trim()
+    ? [turnstileToken.trim(), null]
+    : [null]
 
-      if (code === '0000') {
-        const parsed = parseConsultaTitulo(result.response)
-        return buildResult(
-          parsed.estado, parsed.observacion, parsed.calificador,
-          false, 'consultaTitulo', code, rawJson,
-        )
-      }
+  for (const token of consultaAttempts) {
+    try {
+      const result = await callConsultaTitulo(numeroNorm, anio, codigoZona, codigoOficina, token)
+      if (result?.response) {
+        const code = result.response.codigoRespuesta
+        const rawJson = JSON.stringify(result.response)
 
-      if (code === '998') {
-        console.warn('[SUNARP] consultaTitulo requires CAPTCHA (expected for server-side calls)')
+        if (code === '0000') {
+          const parsed = parseConsultaTitulo(result.response)
+          return buildResult(
+            parsed.estado, parsed.observacion, parsed.calificador,
+            false, 'consultaTitulo', code, rawJson,
+          )
+        }
+
+        if (code === '998') {
+          console.warn(
+            token
+              ? '[SUNARP] consultaTitulo 998 con token (CAPTCHA inválido o dominio del widget no autorizado para esta clave)'
+              : '[SUNARP] consultaTitulo requiere CAPTCHA (sin token)',
+          )
+        }
       }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error)
+      console.error('[SUNARP] consultaTitulo error:', msg)
     }
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('[SUNARP] consultaTitulo error:', msg)
   }
 
   if (last0002) {
@@ -388,22 +408,27 @@ export async function scrapeTitulo(
   anio: string,
   oficina: string,
   tipo: string = 'predio',
+  turnstileToken?: string | null,
 ): Promise<SunarpResult> {
   const MAX_RETRIES = 3
   const RETRY_DELAY = 3000
+  const maxAttempts = turnstileToken?.trim() ? 1 : MAX_RETRIES
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      console.log(`[SUNARP] Attempt ${attempt}/${MAX_RETRIES} — ${normalizeNumeroTitulo(numero)}/${anio}/${oficina} (${tipo}→${mapTipoRegistro(tipo)})`)
+      console.log(
+        `[SUNARP] Attempt ${attempt}/${maxAttempts} — ${normalizeNumeroTitulo(numero)}/${anio}/${oficina} (${tipo}→${mapTipoRegistro(tipo)})` +
+          (turnstileToken?.trim() ? ' [turnstile]' : ''),
+      )
 
-      const result = await attemptScrape(numero, anio, oficina, tipo)
+      const result = await attemptScrape(numero, anio, oficina, tipo, turnstileToken)
 
       if (result) {
         console.log(`[SUNARP] Success — Estado: ${result.estado} [${result.codigoRespuesta}] via ${result.apiEndpoint}`)
         return result
       }
 
-      if (attempt < MAX_RETRIES) {
+      if (attempt < maxAttempts) {
         console.log(`[SUNARP] Attempt ${attempt} returned no result, retrying in ${RETRY_DELAY}ms...`)
         await new Promise(r => setTimeout(r, RETRY_DELAY))
       }
@@ -411,7 +436,7 @@ export async function scrapeTitulo(
       const msg = error instanceof Error ? error.message : String(error)
       console.error(`[SUNARP] Attempt ${attempt} error:`, msg)
 
-      if (attempt < MAX_RETRIES) {
+      if (attempt < maxAttempts) {
         await new Promise(r => setTimeout(r, RETRY_DELAY * attempt))
       }
     }
