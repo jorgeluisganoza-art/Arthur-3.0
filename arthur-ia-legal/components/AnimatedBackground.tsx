@@ -2,125 +2,66 @@
 
 import { useEffect, useRef } from 'react';
 
-const VERTEX_SHADER = `
-attribute vec2 position;
-void main() {
-  gl_Position = vec4(position, 0.0, 1.0);
+const P = new Uint8Array(512);
+const permutation = [
+  151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,
+  140,36,103,30,69,142,8,99,37,240,21,10,23,190,6,148,247,
+  120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,
+  33,88,237,149,56,87,174,20,125,136,171,168,68,175,74,165,
+  71,134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,
+  133,230,220,105,92,41,55,46,245,40,244,102,143,54,65,25,
+  63,161,1,216,80,73,209,76,132,187,208,89,18,169,200,196,
+  135,130,116,188,159,86,164,100,109,198,173,186,3,64,52,217,
+  226,250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,
+  59,227,47,16,58,17,182,189,28,42,223,183,170,213,119,248,
+  152,2,44,154,163,70,221,153,101,155,167,43,172,9,129,22,
+  39,253,19,98,108,110,79,113,224,232,178,185,112,104,218,246,
+  97,228,251,34,242,193,238,210,144,12,191,179,162,241,81,51,
+  145,235,249,14,239,107,49,192,214,31,181,199,106,157,184,84,
+  204,176,115,121,50,45,127,4,150,254,138,236,205,93,222,114,
+  67,29,24,72,243,141,128,195,78,66,215,61,156,180
+];
+for (let i = 0; i < 256; i++) P[i] = P[i + 256] = permutation[i];
+
+function fade(t: number) { return t * t * t * (t * (t * 6 - 15) + 10); }
+function lerp(t: number, a: number, b: number) { return a + t * (b - a); }
+function grad(hash: number, x: number, y: number) {
+  const h = hash & 3;
+  const u = h < 2 ? x : y;
+  const v = h < 2 ? y : x;
+  return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
 }
-`;
-
-const FRAGMENT_SHADER = `
-precision highp float;
-
-uniform vec2 uResolution;
-uniform float uTime;
-uniform vec2 uMouse;
-
-// Simplex 3D noise
-vec4 permute(vec4 x){ return mod(((x*34.0)+1.0)*x, 289.0); }
-vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314 * r; }
-
-float snoise(vec3 v){
-  const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-  const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-  vec3 i  = floor(v + dot(v, C.yyy));
-  vec3 x0 = v - i + dot(i, C.xxx);
-  vec3 g = step(x0.yzx, x0.xyz);
-  vec3 l = 1.0 - g;
-  vec3 i1 = min(g.xyz, l.zxy);
-  vec3 i2 = max(g.xyz, l.zxy);
-  vec3 x1 = x0 - i1 + C.xxx;
-  vec3 x2 = x0 - i2 + C.yyy;
-  vec3 x3 = x0 - D.yyy;
-  i = mod(i, 289.0);
-  vec4 p = permute(permute(permute(
-    i.z + vec4(0.0, i1.z, i2.z, 1.0))
-  + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-  + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-  float n_ = 1.0/7.0;
-  vec3 ns = n_ * D.wyz - D.xzx;
-  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-  vec4 x_ = floor(j * ns.z);
-  vec4 y_ = floor(j - 7.0 * x_);
-  vec4 x = x_ * ns.x + ns.yyyy;
-  vec4 y = y_ * ns.x + ns.yyyy;
-  vec4 h = 1.0 - abs(x) - abs(y);
-  vec4 b0 = vec4(x.xy, y.xy);
-  vec4 b1 = vec4(x.zw, y.zw);
-  vec4 s0 = floor(b0)*2.0 + 1.0;
-  vec4 s1 = floor(b1)*2.0 + 1.0;
-  vec4 sh = -step(h, vec4(0.0));
-  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-  vec3 p0 = vec3(a0.xy, h.x);
-  vec3 p1 = vec3(a0.zw, h.y);
-  vec3 p2 = vec3(a1.xy, h.z);
-  vec3 p3 = vec3(a1.zw, h.w);
-  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
-  p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-  m = m * m;
-  return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+function noise(x: number, y: number) {
+  const X = Math.floor(x) & 255;
+  const Y = Math.floor(y) & 255;
+  x -= Math.floor(x); y -= Math.floor(y);
+  const u = fade(x), v = fade(y);
+  const a = P[X] + Y, b = P[X + 1] + Y;
+  return lerp(v,
+    lerp(u, grad(P[a], x, y),     grad(P[b], x - 1, y)),
+    lerp(u, grad(P[a + 1], x, y - 1), grad(P[b + 1], x - 1, y - 1))
+  );
 }
 
-float fbm(vec3 p) {
-  float value = 0.0;
-  float amplitude = 0.5;
-  float frequency = 1.0;
-  for (int i = 0; i < 5; i++) {
-    value += amplitude * snoise(p * frequency);
+function fbm(x: number, y: number, octaves = 6) {
+  let value = 0, amplitude = 0.5, frequency = 1, max = 0;
+  for (let i = 0; i < octaves; i++) {
+    value += amplitude * noise(x * frequency, y * frequency);
+    max += amplitude;
     amplitude *= 0.5;
     frequency *= 2.0;
   }
-  return value;
+  return value / max;
 }
 
-float domainWarp(vec2 uv, float t) {
-  vec2 mouse = uMouse * 0.18;
-  vec3 p = vec3(uv + mouse, t);
-  float q = fbm(p);
-  float r = fbm(p + vec3(q * 1.2, q * 0.8, 0.0));
-  return fbm(p + vec3(r * 1.5, r * 1.0, t * 0.1));
-}
+function marble(x: number, y: number, time: number) {
+  const qx = fbm(x + 0.0 + time * 0.08, y + 0.0);
+  const qy = fbm(x + 5.2 + time * 0.08, y + 1.3);
 
-void main() {
-  vec2 uv = gl_FragCoord.xy / uResolution;
-  float aspect = uResolution.x / uResolution.y;
-  vec2 coord = vec2(uv.x * aspect, uv.y) * 2.5;
+  const rx = fbm(x + 4.0 * qx + 1.7 + time * 0.04, y + 4.0 * qy + 9.2);
+  const ry = fbm(x + 4.0 * qx + 8.3 + time * 0.04, y + 4.0 * qy + 2.8);
 
-  float n = domainWarp(coord, uTime * 0.09);
-  n = (n + 1.0) * 0.5;
-
-  float dotScale = mix(12.0, 20.0, smoothstep(0.0, 1.0, uResolution.x / 1920.0));
-  vec2 dotUV = gl_FragCoord.xy / dotScale;
-  vec2 local = fract(dotUV) - 0.5;
-
-  float dist = length(local);
-  float radius = n * 0.15;
-  float dot = 1.0 - smoothstep(radius - 0.01, radius + 0.02, dist);
-
-  vec3 bgColor  = vec3(0.04, 0.12, 0.08);
-  vec3 dotColor = vec3(0.12, 0.22, 0.16);
-
-  dotColor = mix(dotColor, vec3(0.18, 0.30, 0.22), n * 0.25);
-
-  vec3 color = mix(bgColor, dotColor, dot);
-
-  gl_FragColor = vec4(color, 1.0);
-}
-`;
-
-function createShader(gl: WebGLRenderingContext, type: number, source: string) {
-  const shader = gl.createShader(type);
-  if (!shader) return null;
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.error(gl.getShaderInfoLog(shader));
-    gl.deleteShader(shader);
-    return null;
-  }
-  return shader;
+  return fbm(x + 4.0 * rx, y + 4.0 * ry);
 }
 
 export default function AnimatedBackground() {
@@ -129,76 +70,64 @@ export default function AnimatedBackground() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    const gl = canvas.getContext('webgl', { antialias: false, alpha: false });
-    if (!gl) return;
-
-    const vs = createShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
-    const fs = createShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
-    if (!vs || !fs) return;
-
-    const program = gl.createProgram();
-    if (!program) return;
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.error(gl.getProgramInfoLog(program));
-      return;
-    }
-    gl.useProgram(program);
-
-    const verts = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
-
-    const posLoc = gl.getAttribLocation(program, 'position');
-    gl.enableVertexAttribArray(posLoc);
-    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-    const uRes = gl.getUniformLocation(program, 'uResolution');
-    const uTime = gl.getUniformLocation(program, 'uTime');
-    const uMouse = gl.getUniformLocation(program, 'uMouse');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
     let animId: number;
     let time = 0;
-    let mx = 0, my = 0;
-    let targetMx = 0, targetMy = 0;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio, 1.5);
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      gl.viewport(0, 0, canvas.width, canvas.height);
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     };
     resize();
     window.addEventListener('resize', resize);
 
-    const handleMouse = (e: MouseEvent) => {
-      targetMx = (e.clientX / window.innerWidth) * 2 - 1;
-      targetMy = (1 - e.clientY / window.innerHeight) * 2 - 1;
-    };
-    window.addEventListener('mousemove', handleMouse);
+    const mobile = window.innerWidth < 768;
+    const SPACING = mobile ? 28 : 22;
+    const MAX_RADIUS = 7.5;
+    const MIN_RADIUS = 0.4;
 
     const animate = () => {
-      time += 0.016;
-      mx += (targetMx - mx) * 0.015;
-      my += (targetMy - my) * 0.015;
+      time += 0.003;
 
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform1f(uTime, time);
-      gl.uniform2f(uMouse, mx, my);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      ctx.fillStyle = '#0a2318';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cols = Math.ceil(canvas.width / SPACING) + 1;
+      const rows = Math.ceil(canvas.height / SPACING) + 1;
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const x = col * SPACING;
+          const y = row * SPACING;
+
+          const nx = x * 0.003;
+          const ny = y * 0.003;
+
+          const raw = marble(nx, ny, time);
+          const value = Math.max(0, Math.min(1, (raw + 1) / 2));
+
+          const t = Math.pow(value, 1.4);
+          const radius = MIN_RADIUS + t * (MAX_RADIUS - MIN_RADIUS);
+
+          const opacity = 0.08 + value * 0.72;
+
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(232, 220, 200, ${opacity.toFixed(3)})`;
+          ctx.fill();
+        }
+      }
 
       animId = requestAnimationFrame(animate);
     };
+
     animate();
 
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('mousemove', handleMouse);
     };
   }, []);
 
@@ -209,9 +138,10 @@ export default function AnimatedBackground() {
         position: 'fixed',
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
+        width: '100vw',
+        height: '100vh',
         zIndex: 0,
+        display: 'block',
       }}
     />
   );
