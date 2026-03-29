@@ -14,6 +14,42 @@ export default function AnimatedBackground() {
     let animId: number;
     let time = 0;
 
+    // Permutation table for noise
+    const perm = new Uint8Array(512);
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    for (let i = 255; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+
+    function fade(t: number) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(a: number, b: number, t: number) { return a + t * (b - a); }
+    function grad(hash: number, x: number, y: number) {
+      const h = hash & 3;
+      const u = h < 2 ? x : y;
+      const v = h < 2 ? y : x;
+      return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+    }
+    function noise(x: number, y: number) {
+      const X = Math.floor(x) & 255;
+      const Y = Math.floor(y) & 255;
+      const xf = x - Math.floor(x);
+      const yf = y - Math.floor(y);
+      const u = fade(xf);
+      const v = fade(yf);
+      const aa = perm[perm[X] + Y];
+      const ab = perm[perm[X] + Y + 1];
+      const ba = perm[perm[X + 1] + Y];
+      const bb = perm[perm[X + 1] + Y + 1];
+      return lerp(
+        lerp(grad(aa, xf, yf), grad(ba, xf - 1, yf), u),
+        lerp(grad(ab, xf, yf - 1), grad(bb, xf - 1, yf - 1), u),
+        v
+      );
+    }
+
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -22,63 +58,43 @@ export default function AnimatedBackground() {
     window.addEventListener('resize', resize);
 
     const animate = () => {
-      time += 0.025;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+      time += 0.004;
       const w = canvas.width;
       const h = canvas.height;
-      const mobile = w < 768;
-      const COLS = mobile ? 55 : 90;
-      const ROWS = mobile ? 40 : 55;
-      const spacingX = w / COLS;
-      const spacingY = h / ROWS;
+      const imgData = ctx.createImageData(w, h);
+      const data = imgData.data;
+      const step = 4;
 
-      for (let col = 0; col < COLS; col++) {
-        for (let row = 0; row < ROWS; row++) {
-          const baseX = col * spacingX;
-          const baseY = row * spacingY;
+      for (let y = 0; y < h; y += step) {
+        for (let x = 0; x < w; x += step) {
+          const nx = x / 250;
+          const ny = y / 250;
 
-          const wave1 = Math.sin(col * 0.12 + time * 1.2) * Math.cos(row * 0.08 + time * 0.7);
-          const wave2 = Math.sin(row * 0.15 - time * 0.9 + col * 0.05) * 0.6;
-          const wave3 = Math.cos(col * 0.07 + row * 0.1 + time * 0.5) * 0.4;
-          const combined = wave1 + wave2 + wave3;
+          const n1 = noise(nx + time * 0.8, ny + time * 0.5);
+          const n2 = noise(nx * 2.2 + time * 0.4 + 5.2, ny * 2.2 - time * 0.6 + 3.7) * 0.5;
+          const n3 = noise(nx * 4.5 - time * 0.3 + 9.1, ny * 4.5 + time * 0.35 + 7.3) * 0.25;
 
-          const dx = Math.sin(col * 0.2 + time * 1.5 + row * 0.05) * spacingX * 0.55;
-          const dy = Math.cos(row * 0.15 + time * 0.8 + col * 0.1) * spacingY * 0.5;
+          const warp = noise(nx + n1 * 0.8, ny + n1 * 0.8);
+          const v = (warp + n2 + n3) / 1.75;
+          const n = (v + 1) / 2;
 
-          const x = baseX + dx;
-          const y = baseY + dy;
+          const r = Math.floor(18 + n * 45);
+          const g = Math.floor(50 + n * 70);
+          const b = Math.floor(30 + n * 50);
 
-          const radius = Math.max(0.3, 2.5 + combined * 2);
-          const opacity = Math.min(0.7, Math.max(0.05, 0.18 + combined * 0.22));
-
-          ctx.beginPath();
-          ctx.arc(x, y, radius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255,255,255,${opacity})`;
-          ctx.fill();
+          for (let dy = 0; dy < step && y + dy < h; dy++) {
+            for (let dx = 0; dx < step && x + dx < w; dx++) {
+              const idx = ((y + dy) * w + (x + dx)) * 4;
+              data[idx] = r;
+              data[idx + 1] = g;
+              data[idx + 2] = b;
+              data[idx + 3] = 255;
+            }
+          }
         }
       }
 
-      const COLS2 = Math.floor(COLS / 3);
-      const ROWS2 = Math.floor(ROWS / 3);
-      for (let col = 0; col < COLS2; col++) {
-        for (let row = 0; row < ROWS2; row++) {
-          const baseX = (col / COLS2) * w;
-          const baseY = (row / ROWS2) * h;
-          const drift = Math.sin(col * 0.3 + time * 0.6) * 20 + Math.cos(row * 0.2 + time * 0.4) * 15;
-          const x = baseX + drift;
-          const y = baseY + Math.sin(time * 0.5 + col * 0.4) * 12;
-          const wave = Math.sin(col * 0.5 + time * 0.7) * Math.cos(row * 0.4 + time * 0.5);
-          const radius = Math.max(0, 8 + wave * 5);
-          const opacity = Math.min(0.07, 0.02 + (wave + 1) * 0.02);
-
-          ctx.beginPath();
-          ctx.arc(x, y, radius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255,255,255,${opacity})`;
-          ctx.fill();
-        }
-      }
-
+      ctx.putImageData(imgData, 0, 0);
       animId = requestAnimationFrame(animate);
     };
 
@@ -91,32 +107,16 @@ export default function AnimatedBackground() {
   }, []);
 
   return (
-    <>
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          zIndex: 0,
-          background: '#0d2b1a',
-        }}
-      />
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          zIndex: 1,
-          background:
-            'linear-gradient(135deg, rgba(15,45,30,0.84) 0%, rgba(20,55,35,0.78) 50%, rgba(10,35,22,0.86) 100%)',
-          pointerEvents: 'none',
-        }}
-      />
-    </>
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+      }}
+    />
   );
 }
