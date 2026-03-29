@@ -76,10 +76,18 @@ const IconScroll = () => (
   </svg>
 );
 
+const IconPerson = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <circle cx="8" cy="5.5" r="2.25" />
+    <path d="M3.5 14.5v0c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5" />
+  </svg>
+);
+
 function TipoIcon({ tipo }: { tipo: string }) {
   if (tipo === 'empresa') return <IconBuilding />;
   if (tipo === 'vehiculo') return <IconCar />;
   if (tipo === 'mandatos') return <IconScroll />;
+  if (tipo === 'persona') return <IconPerson />;
   return <IconHouse />;
 }
 
@@ -88,6 +96,7 @@ function tipoText(tipo: string): string {
     predio: 'Predio',
     empresa: 'Empresa',
     vehiculo: 'Vehículo',
+    persona: 'Personas',
     mandatos: 'Mandatos',
   };
   return labels[tipo] || tipo;

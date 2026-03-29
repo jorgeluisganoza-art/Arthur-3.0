@@ -4,6 +4,8 @@ import {
   getHistorialByTramite, getPlazos, getNotificationsByTramite
 } from '@/lib/db';
 
+const VALID_TRAMITE_TIPO = new Set(['predio', 'empresa', 'vehiculo', 'persona', 'mandatos']);
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -38,10 +40,18 @@ export async function PUT(
     const body = await request.json() as Record<string, unknown>;
 
     // Only allow updating certain fields
-    const allowed = ['alias', 'polling_frequency_hours', 'polling_times', 'whatsapp_number', 'email'];
+    const allowed = ['alias', 'tipo', 'polling_frequency_hours', 'polling_times', 'whatsapp_number', 'email'];
     const updates: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in body) updates[key] = body[key];
+    }
+
+    if ('tipo' in updates && typeof updates.tipo === 'string') {
+      const t = updates.tipo.toLowerCase().trim();
+      if (!VALID_TRAMITE_TIPO.has(t)) {
+        return Response.json({ error: 'Tipo de registro no válido' }, { status: 400 });
+      }
+      updates.tipo = t;
     }
 
     updateTramite(tramiteId, updates);

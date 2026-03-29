@@ -68,6 +68,7 @@ const TIPO_OPTIONS = [
   { value: 'predio', emoji: '🏠', label: 'Predio' },
   { value: 'empresa', emoji: '🏢', label: 'Empresa' },
   { value: 'vehiculo', emoji: '🚗', label: 'Vehículo' },
+  { value: 'persona', emoji: '👤', label: 'Personas naturales' },
   { value: 'mandatos', emoji: '📜', label: 'Mandatos y Poderes' },
 ];
 
@@ -267,7 +268,17 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
               type="text"
               value={numero}
               onChange={e => setNumero(e.target.value)}
-              placeholder={tipo === 'predio' ? 'Ej: 001234' : tipo === 'empresa' ? 'Ej: 005678' : tipo === 'mandatos' ? 'Ej: 003456' : 'Ej: 009012'}
+              placeholder={
+                tipo === 'predio'
+                  ? 'Ej: 001234'
+                  : tipo === 'empresa'
+                    ? 'Ej: 005678'
+                    : tipo === 'persona'
+                      ? 'Ej: 2416207 o 02416207'
+                      : tipo === 'mandatos'
+                        ? 'Ej: 003456'
+                        : 'Ej: 009012'
+              }
               style={inputStyle}
               onFocus={e => { e.currentTarget.style.borderColor = 'var(--ink)'; }}
               onBlur={e => { e.currentTarget.style.borderColor = 'rgba(15,15,15,0.15)'; }}

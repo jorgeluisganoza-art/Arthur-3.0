@@ -18,6 +18,7 @@ function tipoText(tipo: string): string {
     predio: 'Predio',
     empresa: 'Empresa',
     vehiculo: 'Vehículo',
+    persona: 'Personas',
     mandatos: 'Mandatos',
   };
   return labels[tipo] || tipo;

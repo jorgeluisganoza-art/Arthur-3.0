@@ -73,6 +73,25 @@ function mapTipoRegistro(tipo: string): string {
   return TIPO_REGISTRO_MAP[tipo.toLowerCase()] || '001'
 }
 
+/** SUNARP muestra el número a 8 dígitos (p. ej. 02416207); la API a veces acepta también sin ceros a la izquierda. */
+function normalizeNumeroTitulo(numero: string): string {
+  const trimmed = String(numero ?? '').trim().replace(/\s/g, '')
+  const digits = trimmed.replace(/\D/g, '')
+  if (!digits) return trimmed
+  return digits.padStart(8, '0')
+}
+
+/** Variantes de número a probar (dedupe) para mayor compatibilidad con la API. */
+function numeroTituloVariants(numero: string): string[] {
+  const digits = String(numero ?? '').replace(/\D/g, '')
+  if (!digits) return [String(numero ?? '').trim()]
+  const padded = digits.padStart(8, '0')
+  const asInt = String(parseInt(digits, 10))
+  return [...new Set([padded, asInt, digits])]
+}
+
+const ALL_TIPO_REGISTRO_CODES = ['001', '002', '003', '004', '005']
+
 // ── Status extraction from tracking events ─────────────────────────────────────
 
 const STATUS_KEYWORDS = [
@@ -207,11 +226,14 @@ async function callConsultaTitulo(
   numero: string,
   anio: string,
   codigoZona: string,
+  codigoOficina: string,
 ): Promise<{ response: ConsultaTituloResponse } | null> {
   const payload = {
     anioTitulo: anio,
     numeroTitulo: numero,
     codigoZona,
+    codigoOficina,
+    idAreaRegistro: codigoZona + codigoOficina,
     idioma: 'es',
   }
 
@@ -286,44 +308,50 @@ async function attemptScrape(
   tipo: string,
 ): Promise<SunarpResult | null> {
   const { codigoZona, codigoOficina } = parseOficina(oficina)
-  const tipoRegistro = mapTipoRegistro(tipo)
+  const userTipoCode = mapTipoRegistro(tipo)
+  const tipoTryOrder = [userTipoCode, ...ALL_TIPO_REGISTRO_CODES.filter(c => c !== userTipoCode)]
+  const numVariants = numeroTituloVariants(numero)
 
-  // Primary: detalleTitulo (no CAPTCHA required)
-  try {
-    const result = await callDetalleTitulo(numero, anio, codigoZona, codigoOficina, tipoRegistro)
-    if (result?.response) {
-      const code = result.response.codigoRespuesta
-      const rawJson = JSON.stringify(result.response)
+  // Primary: detalleTitulo — probar variantes de número y de tipo (el sitio oficial a veces difiere del tipo elegido).
+  let last0002: { response: DetalleTituloResponse; rawJson: string } | null = null
 
-      if (code === '0000') {
-        const parsed = parseDetalleTitulo(result.response)
-        return buildResult(
-          parsed.estado, parsed.observacion, parsed.calificador,
-          false, 'detalleTitulo', code, rawJson,
-        )
-      }
+  for (const numStr of numVariants) {
+    for (const tipoRegistro of tipoTryOrder) {
+      try {
+        const result = await callDetalleTitulo(numStr, anio, codigoZona, codigoOficina, tipoRegistro)
+        if (result?.response) {
+          const code = result.response.codigoRespuesta
+          const rawJson = JSON.stringify(result.response)
 
-      if (code === '0002') {
-        // Título not found in this office — valid response, not a portal error
-        return buildResult(
-          'SIN DATOS', result.response.descripcionRespuesta, '',
-          false, 'detalleTitulo', code, rawJson,
-        )
-      }
+          if (code === '0000') {
+            const parsed = parseDetalleTitulo(result.response)
+            return buildResult(
+              parsed.estado, parsed.observacion, parsed.calificador,
+              false, 'detalleTitulo', code, rawJson,
+            )
+          }
 
-      if (code === '0004') {
-        console.error('[SUNARP] detalleTitulo: missing required fields:', result.response.descripcionRespuesta)
-        // Fall through to consultaTitulo
+          if (code === '0002') {
+            last0002 = { response: result.response, rawJson }
+            continue
+          }
+
+          if (code === '0004') {
+            console.error('[SUNARP] detalleTitulo: missing required fields:', result.response.descripcionRespuesta)
+            continue
+          }
+        }
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error)
+        console.error('[SUNARP] detalleTitulo error:', msg)
       }
     }
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('[SUNARP] detalleTitulo error:', msg)
   }
 
-  // Fallback: consultaTitulo (requires CAPTCHA — will likely return 998)
+  // Tras agotar detalleTitulo: intentar consultaTitulo (a veces responde sin token si el payload incluye oficina).
+  const numeroNorm = normalizeNumeroTitulo(numero)
   try {
-    const result = await callConsultaTitulo(numero, anio, codigoZona)
+    const result = await callConsultaTitulo(numeroNorm, anio, codigoZona, codigoOficina)
     if (result?.response) {
       const code = result.response.codigoRespuesta
       const rawJson = JSON.stringify(result.response)
@@ -338,12 +366,18 @@ async function attemptScrape(
 
       if (code === '998') {
         console.warn('[SUNARP] consultaTitulo requires CAPTCHA (expected for server-side calls)')
-        return null
       }
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[SUNARP] consultaTitulo error:', msg)
+  }
+
+  if (last0002) {
+    return buildResult(
+      'SIN DATOS', last0002.response.descripcionRespuesta ?? '', '',
+      false, 'detalleTitulo', last0002.response.codigoRespuesta, last0002.rawJson,
+    )
   }
 
   return null
@@ -360,7 +394,7 @@ export async function scrapeTitulo(
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`[SUNARP] Attempt ${attempt}/${MAX_RETRIES} — ${numero}/${anio}/${oficina} (${tipo})`)
+      console.log(`[SUNARP] Attempt ${attempt}/${MAX_RETRIES} — ${normalizeNumeroTitulo(numero)}/${anio}/${oficina} (${tipo}→${mapTipoRegistro(tipo)})`)
 
       const result = await attemptScrape(numero, anio, oficina, tipo)
 

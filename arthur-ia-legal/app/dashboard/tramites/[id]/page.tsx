@@ -102,6 +102,14 @@ function getDaysColor(days: number): string {
   return 'var(--ink)';
 }
 
+const TIPO_SEGUIMIENTO_OPTIONS = [
+  { value: 'predio', label: 'Predio' },
+  { value: 'empresa', label: 'Empresa' },
+  { value: 'vehiculo', label: 'Vehículo' },
+  { value: 'persona', label: 'Personas naturales' },
+  { value: 'mandatos', label: 'Mandatos y poderes' },
+] as const;
+
 export default function TramiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -165,6 +173,21 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
       } else window.alert('No se pudo archivar. Intenta de nuevo.');
     } finally {
       setCaseActionBusy(false);
+    }
+  }
+
+  async function handleTipoChange(nextTipo: string) {
+    if (!tramite || nextTipo === tramite.tipo) return;
+    try {
+      const res = await fetch(`/api/tramites/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: nextTipo }),
+      });
+      if (res.ok) await loadTramite();
+      else window.alert('No se pudo actualizar el tipo de registro.');
+    } catch {
+      window.alert('No se pudo actualizar el tipo de registro.');
     }
   }
 
@@ -395,6 +418,32 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
             </div>
           ))}
         </div>
+        <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(15,15,15,0.08)' }}>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--muted)', marginBottom: '8px' }}>
+            Tipo de registro (como en Síguelo Plus)
+          </div>
+          <select
+            value={tramite.tipo}
+            onChange={e => { void handleTipoChange(e.target.value); }}
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '13px',
+              padding: '10px 12px',
+              border: '1px solid rgba(15,15,15,0.15)',
+              minWidth: '280px',
+              background: 'white',
+              cursor: 'pointer',
+            }}
+          >
+            {TIPO_SEGUIMIENTO_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--muted)', marginTop: '10px', maxWidth: '560px', lineHeight: 1.55 }}>
+            Debe coincidir con «Tipo de registro» en la ficha oficial (p. ej. poderes en registro de personas suelen figurar como <strong>Personas naturales</strong>).
+            Tras cambiarlo, usa <strong>Revisar ahora</strong>.
+          </p>
+        </div>
       </div>
 
       {/* Demo Result Banner */}
@@ -506,6 +555,11 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', lineHeight: '1.7', color: 'var(--ink)', margin: 0 }}>
             {tramite.observacion_texto}
           </p>
+          {(tramite.estado_actual === 'SIN DATOS' || (tramite.observacion_texto && /no existe el titulo/i.test(tramite.observacion_texto))) && (
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', lineHeight: 1.6, color: 'var(--muted)', margin: '16px 0 0' }}>
+              Si en <strong>Síguelo Plus</strong> ves el título con los mismos datos: revisa arriba el <strong>tipo de registro</strong> (p. ej. Personas naturales). La consulta automática usa el canal <code style={{ fontSize: '12px' }}>detalleTitulo</code> del API, que no es idéntico al buscador web tras el CAPTCHA; en algunos casos el portal muestra información que la API aún no devuelve igual.
+            </p>
+          )}
         </div>
       )}
 
