@@ -76,7 +76,7 @@ float fbm(vec3 p) {
 }
 
 float domainWarp(vec2 uv, float t) {
-  vec2 mouse = uMouse * 0.3;
+  vec2 mouse = uMouse * 0.18;
   vec3 p = vec3(uv + mouse, t);
   float q = fbm(p);
   float r = fbm(p + vec3(q * 1.2, q * 0.8, 0.0));
@@ -88,25 +88,23 @@ void main() {
   float aspect = uResolution.x / uResolution.y;
   vec2 coord = vec2(uv.x * aspect, uv.y) * 2.5;
 
-  float n = domainWarp(coord, uTime * 0.15);
+  float n = domainWarp(coord, uTime * 0.09);
   n = (n + 1.0) * 0.5;
 
-  // Halftone dot matrix
-  float dotScale = mix(80.0, 140.0, smoothstep(0.0, 1.0, uResolution.x / 1920.0));
+  // Halftone dot matrix — finer dots at smaller scale for dense sand texture
+  float dotScale = mix(55.0, 95.0, smoothstep(0.0, 1.0, uResolution.x / 1920.0));
   vec2 dotUV = gl_FragCoord.xy / dotScale;
   vec2 cell = floor(dotUV);
   vec2 local = fract(dotUV) - 0.5;
 
   float dist = length(local);
-  float radius = n * 0.52;
-  float dot = 1.0 - smoothstep(radius - 0.04, radius + 0.04, dist);
+  float radius = n * 0.48;
+  float dot = 1.0 - smoothstep(radius - 0.03, radius + 0.05, dist);
 
-  // Dark blue-green dot color on cream background
-  vec3 bgColor = vec3(0.96, 0.94, 0.91);
-  vec3 dotColor = vec3(0.06, 0.20, 0.28);
+  vec3 bgColor  = vec3(0.05, 0.15, 0.10);   // deep forest green
+  vec3 dotColor = vec3(0.45, 0.75, 0.55);  // bright sage green
 
-  // Subtle color shift in denser areas
-  dotColor = mix(dotColor, vec3(0.04, 0.15, 0.22), n);
+  dotColor = mix(dotColor, vec3(0.65, 0.90, 0.72), n * 0.4);
 
   vec3 color = mix(bgColor, dotColor, dot);
 
@@ -187,8 +185,8 @@ export default function AnimatedBackground() {
 
     const animate = () => {
       time += 0.016;
-      mx += (targetMx - mx) * 0.03;
-      my += (targetMy - my) * 0.03;
+      mx += (targetMx - mx) * 0.015;
+      my += (targetMy - my) * 0.015;
 
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, time);
