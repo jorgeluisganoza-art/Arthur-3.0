@@ -37,40 +37,49 @@ export default function LandingPage() {
           onMouseLeave={() => setHovered(false)}
           style={{
             cursor: 'pointer',
-            transition: 'all 0.4s ease',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '130px',
             animation: 'fadeUp 0.8s ease forwards',
           }}
         >
+          {/* "arthur" text */}
           <h1
             style={{
               fontFamily: 'DM Serif Display, serif',
               fontStyle: 'italic',
-              fontSize: hovered ? 'clamp(28px, 4vw, 48px)' : 'clamp(72px, 10vw, 120px)',
+              fontSize: 'clamp(72px, 10vw, 120px)',
               color: '#ffffff',
               fontWeight: 400,
               letterSpacing: '-0.02em',
               lineHeight: 1,
               margin: 0,
-              transition: 'all 0.4s ease',
+              transition: 'opacity 0.35s ease, transform 0.35s ease',
               opacity: hovered ? 0 : 1,
-              position: hovered ? 'absolute' : 'relative',
-              pointerEvents: 'none',
+              transform: hovered ? 'scale(0.95)' : 'scale(1)',
             }}
           >
             arthur
           </h1>
+
+          {/* "Empieza ahora" CTA */}
           <div
             style={{
+              position: 'absolute',
               fontFamily: 'DM Mono, monospace',
-              fontSize: 'clamp(14px, 2vw, 18px)',
+              fontSize: 'clamp(13px, 1.5vw, 16px)',
               fontWeight: 500,
               textTransform: 'uppercase',
               letterSpacing: '0.15em',
               color: '#ffffff',
-              transition: 'all 0.4s ease',
+              transition: 'opacity 0.35s ease, transform 0.35s ease',
               opacity: hovered ? 1 : 0,
-              padding: '20px 48px',
-              border: '1px solid rgba(255,255,255,0.3)',
+              transform: hovered ? 'scale(1)' : 'scale(1.05)',
+              padding: '22px 52px',
+              border: '1px solid rgba(255,255,255,0.35)',
+              whiteSpace: 'nowrap',
             }}
           >
             Empieza ahora →

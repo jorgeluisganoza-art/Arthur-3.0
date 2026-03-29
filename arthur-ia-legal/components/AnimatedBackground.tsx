@@ -13,42 +13,8 @@ export default function AnimatedBackground() {
 
     let animId: number;
     let time = 0;
-
-    // Permutation table for noise
-    const perm = new Uint8Array(512);
-    const p = new Uint8Array(256);
-    for (let i = 0; i < 256; i++) p[i] = i;
-    for (let i = 255; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [p[i], p[j]] = [p[j], p[i]];
-    }
-    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
-
-    function fade(t: number) { return t * t * t * (t * (t * 6 - 15) + 10); }
-    function lerp(a: number, b: number, t: number) { return a + t * (b - a); }
-    function grad(hash: number, x: number, y: number) {
-      const h = hash & 3;
-      const u = h < 2 ? x : y;
-      const v = h < 2 ? y : x;
-      return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
-    }
-    function noise(x: number, y: number) {
-      const X = Math.floor(x) & 255;
-      const Y = Math.floor(y) & 255;
-      const xf = x - Math.floor(x);
-      const yf = y - Math.floor(y);
-      const u = fade(xf);
-      const v = fade(yf);
-      const aa = perm[perm[X] + Y];
-      const ab = perm[perm[X] + Y + 1];
-      const ba = perm[perm[X + 1] + Y];
-      const bb = perm[perm[X + 1] + Y + 1];
-      return lerp(
-        lerp(grad(aa, xf, yf), grad(ba, xf - 1, yf), u),
-        lerp(grad(ab, xf, yf - 1), grad(bb, xf - 1, yf - 1), u),
-        v
-      );
-    }
+    let mouseX = 0.5;
+    let mouseY = 0.5;
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -57,44 +23,93 @@ export default function AnimatedBackground() {
     resize();
     window.addEventListener('resize', resize);
 
+    const handleMouse = (e: MouseEvent) => {
+      mouseX = e.clientX / window.innerWidth;
+      mouseY = e.clientY / window.innerHeight;
+    };
+    window.addEventListener('mousemove', handleMouse);
+
     const animate = () => {
-      time += 0.004;
+      time += 0.003;
       const w = canvas.width;
       const h = canvas.height;
-      const imgData = ctx.createImageData(w, h);
-      const data = imgData.data;
-      const step = 4;
 
-      for (let y = 0; y < h; y += step) {
-        for (let x = 0; x < w; x += step) {
-          const nx = x / 250;
-          const ny = y / 250;
+      ctx.fillStyle = '#0a1f14';
+      ctx.fillRect(0, 0, w, h);
 
-          const n1 = noise(nx + time * 0.8, ny + time * 0.5);
-          const n2 = noise(nx * 2.2 + time * 0.4 + 5.2, ny * 2.2 - time * 0.6 + 3.7) * 0.5;
-          const n3 = noise(nx * 4.5 - time * 0.3 + 9.1, ny * 4.5 + time * 0.35 + 7.3) * 0.25;
+      // Flowing grid lines (horizontal)
+      ctx.lineWidth = 0.5;
+      const hLines = 40;
+      for (let i = 0; i < hLines; i++) {
+        const baseY = (i / hLines) * h;
+        ctx.beginPath();
+        const proximity = 1 - Math.abs((i / hLines) - mouseY) * 1.5;
+        const brightness = Math.max(0.03, Math.min(0.15, proximity * 0.15));
+        ctx.strokeStyle = `rgba(120, 220, 160, ${brightness})`;
 
-          const warp = noise(nx + n1 * 0.8, ny + n1 * 0.8);
-          const v = (warp + n2 + n3) / 1.75;
-          const n = (v + 1) / 2;
-
-          const r = Math.floor(18 + n * 45);
-          const g = Math.floor(50 + n * 70);
-          const b = Math.floor(30 + n * 50);
-
-          for (let dy = 0; dy < step && y + dy < h; dy++) {
-            for (let dx = 0; dx < step && x + dx < w; dx++) {
-              const idx = ((y + dy) * w + (x + dx)) * 4;
-              data[idx] = r;
-              data[idx + 1] = g;
-              data[idx + 2] = b;
-              data[idx + 3] = 255;
-            }
-          }
+        for (let x = 0; x <= w; x += 6) {
+          const nx = x / w;
+          const wave = Math.sin(nx * 6 + time * 2 + i * 0.3) * 12 +
+                       Math.sin(nx * 3 - time * 1.5 + i * 0.15) * 8 +
+                       Math.cos(nx * 10 + time * 3) * 3;
+          const y = baseY + wave;
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
+        ctx.stroke();
       }
 
-      ctx.putImageData(imgData, 0, 0);
+      // Vertical flowing lines
+      const vLines = 50;
+      for (let i = 0; i < vLines; i++) {
+        const baseX = (i / vLines) * w;
+        ctx.beginPath();
+        const proximity = 1 - Math.abs((i / vLines) - mouseX) * 1.5;
+        const brightness = Math.max(0.02, Math.min(0.08, proximity * 0.08));
+        ctx.strokeStyle = `rgba(100, 200, 150, ${brightness})`;
+
+        for (let y = 0; y <= h; y += 8) {
+          const ny = y / h;
+          const wave = Math.sin(ny * 5 + time * 1.8 + i * 0.25) * 10 +
+                       Math.cos(ny * 8 - time * 2.2 + i * 0.1) * 5;
+          const x = baseX + wave;
+          if (y === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // Floating particles
+      for (let i = 0; i < 60; i++) {
+        const speed = 0.2 + (i % 7) * 0.12;
+        const px = ((Math.sin(i * 7.3 + time * speed) + 1) / 2) * w;
+        const py = ((Math.cos(i * 4.7 + time * speed * 0.7) + 1) / 2) * h;
+        const pulse = Math.sin(time * 3 + i * 2.1) * 0.5 + 0.5;
+        const size = 1 + pulse * 2;
+        const alpha = 0.1 + pulse * 0.25;
+
+        ctx.beginPath();
+        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(140, 230, 180, ${alpha})`;
+        ctx.fill();
+      }
+
+      // Scanning line effect
+      const scanY = ((Math.sin(time * 0.8) + 1) / 2) * h;
+      const scanGrad = ctx.createLinearGradient(0, scanY - 40, 0, scanY + 40);
+      scanGrad.addColorStop(0, 'rgba(100, 220, 160, 0)');
+      scanGrad.addColorStop(0.5, 'rgba(100, 220, 160, 0.04)');
+      scanGrad.addColorStop(1, 'rgba(100, 220, 160, 0)');
+      ctx.fillStyle = scanGrad;
+      ctx.fillRect(0, scanY - 40, w, 80);
+
+      // Vignette
+      const vignette = ctx.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.9);
+      vignette.addColorStop(0, 'rgba(0,0,0,0)');
+      vignette.addColorStop(1, 'rgba(0,0,0,0.4)');
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, w, h);
+
       animId = requestAnimationFrame(animate);
     };
 
@@ -103,6 +118,7 @@ export default function AnimatedBackground() {
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', handleMouse);
     };
   }, []);
 
