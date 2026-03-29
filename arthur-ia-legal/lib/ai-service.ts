@@ -4,7 +4,7 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-6';
 
 // ── Function 1: getNextStepSuggestion ─────────────────────────────────────
 
@@ -38,7 +38,7 @@ Responde SOLO con la sugerencia, sin introducción.`,
     if (block.type === 'text') return block.text.trim();
     return getDefaultSuggestion(estado);
   } catch (error) {
-    console.error('[AI] getNextStepSuggestion error:', error);
+    console.error('[AI] getNextStepSuggestion error:', error instanceof Error ? error.message : error);
     return getDefaultSuggestion(estado);
   }
 }
@@ -121,7 +121,7 @@ El campo tipoDocumento debe ser uno de: "subsanatorio", "apelacion", "queja", "p
     const parsed = JSON.parse(text) as EsquelaAnalysis;
     return { ...defaultResult, ...parsed };
   } catch (error) {
-    console.error('[AI] analyzeEsquela error:', error);
+    console.error('[AI] analyzeEsquela error:', error instanceof Error ? error.message : error);
     return defaultResult;
   }
 }
@@ -254,12 +254,7 @@ Cuando el escrito esté completo (isComplete:true), establece remainingFields co
 
     return { message, documentContent, isComplete, remainingFields };
   } catch (error) {
-    console.error('[AI] chatDocument error:', error);
-    return {
-      message: 'Lo siento, hubo un error al procesar tu solicitud. Por favor intenta de nuevo.',
-      documentContent: '',
-      isComplete: false,
-      remainingFields: [],
-    };
+    console.error('[AI] chatDocument error:', error instanceof Error ? error.message : error);
+    throw error;
   }
 }

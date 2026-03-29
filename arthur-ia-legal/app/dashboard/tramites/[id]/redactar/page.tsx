@@ -114,15 +114,22 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
         documentContent: string;
         isComplete: boolean;
         remainingFields: string[];
+        error?: string;
       };
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
-      if (data.documentContent) {
-        setDocumentContent(data.documentContent);
-        setSavedTime('hace 1 seg');
+      if (!res.ok) {
+        console.error('[Chat] API error:', data.error);
+        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error || 'Error desconocido'}` }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+        if (data.documentContent) {
+          setDocumentContent(data.documentContent);
+          setSavedTime('hace 1 seg');
+        }
       }
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Lo siento, hubo un error. Por favor intenta de nuevo.' }]);
+    } catch (err) {
+      console.error('[Chat] fetch error:', err);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Error de conexión. Por favor intenta de nuevo.' }]);
     } finally {
       setIsTyping(false);
     }
@@ -184,7 +191,7 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
             <span style={{
               fontFamily: 'DM Mono, monospace',
               fontSize: '10px',
-              background: '#1a3a5c',
+              background: '#1a3d2b',
               color: 'white',
               padding: '4px 10px',
               borderRadius: '2px',
@@ -249,7 +256,7 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
                 </div>
               ) : (
                 <div style={{
-                  background: '#1a3a5c',
+                  background: '#1a3d2b',
                   color: 'var(--paper)',
                   padding: '14px 18px',
                   borderRadius: '2px',
@@ -374,7 +381,7 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
                 color: documentContent ? 'var(--ink)' : 'var(--muted)',
               }}
             >
-              📋 Copiar
+              Copiar texto
             </button>
           </div>
         </div>
@@ -402,7 +409,7 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
                 paddingTop: '16px',
                 borderTop: '1px solid rgba(15,15,15,0.1)',
               }}>
-                ⚠ Borrador generado por Arthur-IA Legal. Revisar con abogado antes de presentar.
+                Aviso: Borrador generado por Arthur-IA Legal. Revisar con abogado antes de presentar.
               </div>
             </div>
           ) : (

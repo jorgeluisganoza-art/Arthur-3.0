@@ -45,7 +45,7 @@ export default function AlertasPage() {
         <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400 }}>
           Alertas
         </h1>
-        <div style={{ width: '60px', height: '2px', background: '#c0392b', marginTop: '16px' }} />
+        <div style={{ width: '60px', height: '2px', background: '#1a3d2b', marginTop: '16px' }} />
       </div>
 
       <div style={{ marginTop: '40px' }}>
@@ -76,7 +76,7 @@ export default function AlertasPage() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <span style={{ fontSize: '16px' }}>{n.success ? (n.canal === 'whatsapp' ? '📱' : '✉') : '❌'}</span>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: n.success ? '#166534' : '#991b1b', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: 500, color: 'var(--ink)', marginBottom: '2px' }}>
                       {n.tramiteAlias || 'Trámite'} — {n.canal === 'whatsapp' ? 'WhatsApp' : 'Email'}

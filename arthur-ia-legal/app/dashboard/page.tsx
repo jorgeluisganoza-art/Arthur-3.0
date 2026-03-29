@@ -45,11 +45,41 @@ function relativeTime(dateStr: string | null): string {
   return `Hace ${days}d`;
 }
 
-function tipoLabel(tipo: string): string {
+const IconHouse = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <path d="M2 7L8 2l6 5" />
+    <path d="M4 7v7h8V7" />
+    <path d="M6 14v-4h4v4" />
+  </svg>
+);
+
+const IconBuilding = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <rect x="2" y="2" width="12" height="13" />
+    <path d="M5 5h2M9 5h2M5 8h2M9 8h2M6 15v-4h4v4" />
+  </svg>
+);
+
+const IconCar = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <path d="M3 9l1.5-4h7L13 9" />
+    <rect x="1" y="9" width="14" height="4" rx="1" />
+    <circle cx="4" cy="13" r="1.5" />
+    <circle cx="12" cy="13" r="1.5" />
+  </svg>
+);
+
+function TipoIcon({ tipo }: { tipo: string }) {
+  if (tipo === 'empresa') return <IconBuilding />;
+  if (tipo === 'vehiculo') return <IconCar />;
+  return <IconHouse />;
+}
+
+function tipoText(tipo: string): string {
   const labels: Record<string, string> = {
-    predio: '🏠 Predio',
-    empresa: '🏢 Empresa',
-    vehiculo: '🚗 Vehículo',
+    predio: 'Predio',
+    empresa: 'Empresa',
+    vehiculo: 'Vehículo',
   };
   return labels[tipo] || tipo;
 }
@@ -164,15 +194,15 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginTop: '32px' }}>
         {[
           { label: 'TOTAL', value: stats.total, borderColor: 'transparent', color: 'var(--ink)', delay: 0 },
-          { label: 'OBSERVADOS', value: stats.observados, borderColor: '#c0392b', color: '#c0392b', delay: 100 },
-          { label: 'PENDIENTES', value: stats.pendientes, borderColor: '#e6a817', color: '#b8860b', delay: 200 },
-          { label: 'INSCRITOS', value: stats.inscritos, borderColor: '#27ae60', color: '#27ae60', delay: 300 },
+          { label: 'OBSERVADOS', value: stats.observados, borderColor: '#991b1b', color: '#991b1b', delay: 100 },
+          { label: 'PENDIENTES', value: stats.pendientes, borderColor: '#d97706', color: '#92400e', delay: 200 },
+          { label: 'INSCRITOS', value: stats.inscritos, borderColor: '#166534', color: '#166534', delay: 300 },
         ].map(card => (
           <div
             key={card.label}
             className="animate-fadeUp"
             style={{
-              background: card.label === 'OBSERVADOS' && stats.observados > 0 ? 'rgba(192,57,43,0.04)' : 'white',
+              background: card.label === 'OBSERVADOS' && stats.observados > 0 ? 'rgba(153,27,27,0.04)' : 'white',
               border: '1px solid rgba(15,15,15,0.08)',
               borderTop: card.borderColor !== 'transparent' ? `3px solid ${card.borderColor}` : '1px solid rgba(15,15,15,0.08)',
               padding: '24px 28px',
@@ -194,7 +224,7 @@ export default function DashboardPage() {
       {/* Alert Banner */}
       {firstObservado && (
         <div style={{
-          background: '#c0392b',
+          background: '#991b1b',
           padding: '16px 28px',
           marginTop: '24px',
           display: 'flex',
@@ -202,8 +232,9 @@ export default function DashboardPage() {
           alignItems: 'center',
           animation: 'fadeUp 0.4s ease forwards',
         }}>
-          <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'white', fontWeight: 500 }}>
-            ⚠ {firstObservado.alias} — OBSERVADO. Requiere atención inmediata.
+          <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'white', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', border: '1.5px solid white', borderRadius: '50%', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>!</span>
+            {firstObservado.alias} — OBSERVADO. Requiere atención inmediata.
           </span>
           <Link href={`/dashboard/tramites/${firstObservado.id}`} style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.85)', cursor: 'pointer' }}>
             Ver detalle →
@@ -267,15 +298,18 @@ export default function DashboardPage() {
                   height: '64px',
                   alignItems: 'center',
                   borderBottom: '1px solid rgba(15,15,15,0.06)',
-                  borderLeft: isObservado ? '3px solid #c0392b' : '3px solid transparent',
-                  background: isPolling ? 'rgba(245,240,232,0.8)' : ps?.result ? 'rgba(245,240,232,0.6)' : 'white',
+                  borderLeft: isObservado ? '3px solid #991b1b' : '3px solid transparent',
+                  background: isPolling ? '#f7f7f7' : ps?.result ? 'rgba(247,247,247,0.6)' : 'white',
                   gap: '16px',
                   animationDelay: `${idx * 50}ms`,
                   transition: 'background 0.3s',
                 }}
               >
                 <div><StatusBadge estado={t.estado_actual} /></div>
-                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--ink)' }}>{tipoLabel(t.tipo)}</div>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <TipoIcon tipo={t.tipo} />
+                  {tipoText(t.tipo)}
+                </div>
                 <div>
                   <Link
                     href={`/dashboard/tramites/${t.id}`}
@@ -293,7 +327,7 @@ export default function DashboardPage() {
                   {isPolling && ps ? (
                     <span className="animate-pulse-text">{ps.step}</span>
                   ) : ps?.result ? (
-                    <span style={{ color: ps.result.error ? '#c0392b' : ps.result.changed ? '#1e8449' : 'var(--muted)', fontSize: '12px' }}>
+                    <span style={{ color: ps.result.error ? '#991b1b' : ps.result.changed ? '#166534' : 'var(--muted)', fontSize: '12px' }}>
                       {ps.result.error ? '⚠ Portal no disponible' : ps.result.changed ? '✓ Actualizado' : 'Sin cambios'}
                     </span>
                   ) : (

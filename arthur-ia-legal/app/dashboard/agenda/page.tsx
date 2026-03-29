@@ -29,15 +29,15 @@ function formatDate(dateStr: string): string {
 }
 
 function getDaysColor(days: number): string {
-  if (days < 7) return '#c0392b';
-  if (days < 15) return '#b8860b';
+  if (days < 7) return '#991b1b';
+  if (days < 15) return '#92400e';
   return 'var(--ink)';
 }
 
 function getTipoPill(tipo: string | null): React.ReactNode {
   const labels: Record<string, { label: string; color: string; bg: string }> = {
-    subsanacion: { label: 'Subsanación', color: '#c0392b', bg: 'rgba(192,57,43,0.1)' },
-    apelacion: { label: 'Apelación', color: '#922b21', bg: 'rgba(192,57,43,0.15)' },
+    subsanacion: { label: 'Subsanación', color: '#991b1b', bg: 'rgba(153,27,27,0.1)' },
+    apelacion: { label: 'Apelación', color: '#7f1d1d', bg: 'rgba(127,29,29,0.15)' },
     queja: { label: 'Queja', color: '#b8860b', bg: 'rgba(184,134,11,0.1)' },
     prorroga: { label: 'Prórroga', color: '#1e8449', bg: 'rgba(39,174,96,0.1)' },
   };
@@ -98,9 +98,9 @@ export default function AgendaPage() {
   const upcoming = plazos.filter(p => daysUntil(p.fecha_vencimiento) > 30);
 
   const sections = [
-    { label: '🔴 Esta semana', items: thisWeek, borderColor: '#c0392b' },
-    { label: '🟡 Este mes', items: thisMonth, borderColor: '#e6a817' },
-    { label: '⚪ Próximos meses', items: upcoming, borderColor: 'rgba(107,101,96,0.3)' },
+    { label: 'Esta semana', items: thisWeek, borderColor: '#991b1b' },
+    { label: 'Este mes', items: thisMonth, borderColor: '#d97706' },
+    { label: 'Próximos meses', items: upcoming, borderColor: 'rgba(136,136,136,0.3)' },
   ];
 
   return (
@@ -113,7 +113,7 @@ export default function AgendaPage() {
         <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400 }}>
           Agenda
         </h1>
-        <div style={{ width: '60px', height: '2px', background: '#c0392b', marginTop: '16px' }} />
+        <div style={{ width: '60px', height: '2px', background: '#1a3d2b', marginTop: '16px' }} />
       </div>
 
       {plazos.length === 0 ? (

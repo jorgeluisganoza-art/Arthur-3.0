@@ -5,6 +5,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
+  }
+
   try {
     const { id } = await params;
     const tramiteId = parseInt(id);
@@ -32,7 +36,8 @@ export async function POST(
     const result = await chatDocument(messages, tramiteContext, documentType);
     return Response.json(result);
   } catch (error) {
-    console.error('[API] POST /tramites/[id]/chat error:', error);
-    return Response.json({ error: 'Error en el chat' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Error en el chat';
+    console.error('[API] POST /tramites/[id]/chat error:', message);
+    return Response.json({ error: message }, { status: 500 });
   }
 }

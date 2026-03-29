@@ -193,7 +193,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
         <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '28px', color: 'var(--ink)', fontWeight: 400 }}>
           Nuevo trámite
         </h2>
-        <div style={{ width: '60px', height: '2px', background: '#c0392b', marginTop: '12px', marginBottom: '28px' }} />
+        <div style={{ width: '60px', height: '2px', background: '#1a3d2b', marginTop: '12px', marginBottom: '28px' }} />
 
         {/* Tipo selector */}
         <label style={labelStyle}>TIPO DE TRÁMITE</label>
@@ -290,14 +290,14 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
           <div style={{ marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: 500, color: 'var(--ink)' }}>
-                📱 WhatsApp
+                WhatsApp
               </span>
               <div
                 onClick={() => setWhatsappEnabled(!whatsappEnabled)}
                 style={{
                   width: '44px',
                   height: '24px',
-                  background: whatsappEnabled ? '#1a3a5c' : 'rgba(15,15,15,0.15)',
+                  background: whatsappEnabled ? '#1a3d2b' : 'rgba(15,15,15,0.15)',
                   borderRadius: '12px',
                   position: 'relative',
                   cursor: 'pointer',
@@ -338,14 +338,14 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
           <div style={{ marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: 500, color: 'var(--ink)' }}>
-                ✉ Email
+                Email
               </span>
               <div
                 onClick={() => setEmailEnabled(!emailEnabled)}
                 style={{
                   width: '44px',
                   height: '24px',
-                  background: emailEnabled ? '#1a3a5c' : 'rgba(15,15,15,0.15)',
+                  background: emailEnabled ? '#1a3d2b' : 'rgba(15,15,15,0.15)',
                   borderRadius: '12px',
                   position: 'relative',
                   cursor: 'pointer',

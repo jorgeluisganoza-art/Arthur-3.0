@@ -86,17 +86,17 @@ function relativeTime(dateStr: string | null): string {
 
 function getStatusColor(estado: string): string {
   const colors: Record<string, string> = {
-    OBSERVADO: '#c0392b',
-    TACHA: '#922b21',
-    PENDIENTE: '#b8860b',
-    INSCRITO: '#1e8449',
+    OBSERVADO: '#991b1b',
+    TACHA: '#7f1d1d',
+    PENDIENTE: '#92400e',
+    INSCRITO: '#166534',
   };
   return colors[estado] || 'var(--muted)';
 }
 
 function getDaysColor(days: number): string {
-  if (days < 7) return '#c0392b';
-  if (days < 15) return '#b8860b';
+  if (days < 7) return '#991b1b';
+  if (days < 15) return '#92400e';
   return 'var(--ink)';
 }
 
@@ -209,7 +209,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           {demoStep ? demoStep : 'Revisar ahora'}
         </button>
       </div>
-      <div style={{ width: '60px', height: '2px', background: '#c0392b', marginTop: '16px', marginBottom: '32px' }} />
+      <div style={{ width: '60px', height: '2px', background: '#1a3d2b', marginTop: '16px', marginBottom: '32px' }} />
 
       {/* Current Status Card */}
       <div style={{
@@ -250,8 +250,8 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           style={{
             padding: '16px 24px',
             marginBottom: '24px',
-            background: demoResult.error ? '#c0392b' : demoResult.changed ? 'rgba(39,174,96,0.1)' : 'rgba(107,101,96,0.1)',
-            border: `1px solid ${demoResult.error ? '#c0392b' : demoResult.changed ? '#27ae60' : 'rgba(107,101,96,0.2)'}`,
+            background: demoResult.error ? '#991b1b' : demoResult.changed ? 'rgba(22,101,52,0.08)' : 'rgba(136,136,136,0.1)',
+            border: `1px solid ${demoResult.error ? '#991b1b' : demoResult.changed ? '#166534' : 'rgba(136,136,136,0.2)'}`,
             color: demoResult.error ? 'white' : 'var(--ink)',
             animation: 'fadeUp 0.4s ease forwards',
             fontFamily: 'Inter, sans-serif',
@@ -259,9 +259,9 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           }}
         >
           {demoResult.error
-            ? `⚠ Portal SUNARP no disponible · Mostrando último estado`
+            ? 'Portal SUNARP no disponible · Mostrando último estado'
             : demoResult.changed
-            ? `✅ Estado actualizado · ${demoResult.notificacionesEnviadas.whatsapp ? 'WhatsApp enviado · ' : ''}${demoResult.notificacionesEnviadas.email ? 'Email enviado' : ''}`
+            ? `Estado actualizado · ${demoResult.notificacionesEnviadas.whatsapp ? 'WhatsApp enviado · ' : ''}${demoResult.notificacionesEnviadas.email ? 'Email enviado' : ''}`
             : 'Sin cambios desde la última revisión'}
         </div>
       )}
@@ -269,7 +269,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
       {/* AI Suggestion */}
       {needsAction && (
         <div style={{
-          background: '#1a3a5c',
+          background: '#1a3d2b',
           padding: '32px',
           marginBottom: '24px',
           animation: 'fadeUp 0.4s ease forwards',
@@ -278,17 +278,16 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '20px' }}>💡</span>
               <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: '22px', color: 'white' }}>Qué hacer ahora</span>
             </div>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', background: 'rgba(245,240,232,0.15)', color: 'rgba(245,240,232,0.7)', padding: '4px 10px', borderRadius: '2px' }}>
+            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.7)', padding: '4px 10px', borderRadius: '2px' }}>
               Claude AI
             </span>
           </div>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '16px', lineHeight: '1.75', color: 'rgba(245,240,232,0.85)', margin: 0 }}>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '16px', lineHeight: '1.75', color: 'rgba(255,255,255,0.85)', margin: 0 }}>
             {suggestion || 'Haz clic en "Revisar ahora" para obtener una sugerencia personalizada de Arthur-IA.'}
           </p>
-          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', fontStyle: 'italic', color: 'rgba(245,240,232,0.35)', marginTop: '16px' }}>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', fontStyle: 'italic', color: 'rgba(255,255,255,0.35)', marginTop: '16px' }}>
             Siempre consulta con tu abogado antes de actuar
           </div>
         </div>
@@ -310,7 +309,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
         }}>
           <div>
             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', fontWeight: 600, color: 'var(--ink)', marginBottom: '4px' }}>
-              📝 Arthur-IA puede redactar tu escrito
+              Arthur-IA puede redactar tu escrito
             </div>
             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--muted)' }}>
               Basado en la esquela · 5 min con asistencia IA
@@ -445,7 +444,8 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           </div>
           {tramite.notifications.map(n => (
             <div key={n.id} style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--muted)', marginBottom: '6px' }}>
-              {n.success ? '✅' : '❌'} {n.canal === 'whatsapp' ? 'WhatsApp' : 'Email'} · {n.estado} · {new Date(n.enviado_at).toLocaleString('es-PE')}
+              <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: n.success ? '#166534' : '#991b1b', marginRight: '6px', verticalAlign: 'middle' }} />
+              {n.success ? 'Enviado' : 'Error'} · {n.canal === 'whatsapp' ? 'WhatsApp' : 'Email'} · {n.estado} · {new Date(n.enviado_at).toLocaleString('es-PE')}
             </div>
           ))}
         </div>

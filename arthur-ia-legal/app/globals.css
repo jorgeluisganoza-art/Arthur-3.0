@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #0f0f0f;
-  --paper: #f5f0e8;
-  --paper-dark: #ede7d5;
-  --accent: #c0392b;
-  --accent-light: #f8e8e6;
-  --blue: #1a3a5c;
-  --muted: #6b6560;
+  --ink: #111111;
+  --paper: #ffffff;
+  --paper-dark: #f7f7f7;
+  --accent: #1a3d2b;
+  --accent-light: #e8f0eb;
+  --blue: #1a3d2b;
+  --muted: #888888;
 }
 
 * {
@@ -52,33 +52,33 @@ textarea {
 }
 
 .badge-observado {
-  background: rgba(192, 57, 43, 0.12);
-  color: #c0392b;
-  border: 1px solid rgba(192, 57, 43, 0.2);
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
 }
 
 .badge-pendiente {
-  background: rgba(184, 134, 11, 0.1);
-  color: #b8860b;
-  border: 1px solid rgba(184, 134, 11, 0.2);
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
 }
 
 .badge-inscrito {
-  background: rgba(39, 174, 96, 0.1);
-  color: #1e8449;
-  border: 1px solid rgba(39, 174, 96, 0.2);
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
 .badge-tacha {
-  background: rgba(192, 57, 43, 0.2);
-  color: #922b21;
-  border: 1px solid rgba(192, 57, 43, 0.3);
+  background: #fef2f2;
+  color: #7f1d1d;
+  border: 1px solid #fecaca;
 }
 
 .badge-sin-datos {
-  background: rgba(107, 101, 96, 0.1);
+  background: rgba(136, 136, 136, 0.1);
   color: var(--muted);
-  border: 1px solid rgba(107, 101, 96, 0.15);
+  border: 1px solid rgba(136, 136, 136, 0.15);
 }
 
 /* Animations */
@@ -191,7 +191,7 @@ textarea {
 }
 
 .campo-placeholder {
-  background: rgba(192, 57, 43, 0.1);
+  background: rgba(26, 61, 43, 0.1);
   color: var(--accent);
   padding: 0 4px;
   border-radius: 2px;
