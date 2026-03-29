@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 interface SidebarProps {
@@ -41,13 +41,19 @@ const IconChat = () => (
 
 export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [count, setCount] = useState(observadosCount);
+  const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
     fetch('/api/dashboard/stats')
       .then(r => r.json())
       .then(data => setCount(data.observados || 0))
       .catch(() => {});
+    try {
+      const auth = JSON.parse(localStorage.getItem('arthur_auth') || '{}');
+      if (auth.email) setUserEmail(auth.email);
+    } catch { /* ignore */ }
   }, []);
 
   const links = [
@@ -156,7 +162,7 @@ export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
           right: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
           <div
             style={{
               width: '32px',
@@ -172,35 +178,54 @@ export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
               flexShrink: 0,
             }}
           >
-            HL
+            {userEmail ? userEmail.charAt(0).toUpperCase() : 'U'}
           </div>
-          <div>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
             <div
               style={{
                 fontFamily: 'Inter, sans-serif',
-                fontSize: '13px',
+                fontSize: '12px',
                 color: 'white',
                 lineHeight: 1.3,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
-              Héctor Levano
+              {userEmail || 'Usuario'}
             </div>
-            <span
-              style={{
-                fontFamily: 'DM Mono, monospace',
-                fontSize: '10px',
-                textTransform: 'uppercase',
-                background: 'rgba(255,255,255,0.15)',
-                color: 'rgba(255,255,255,0.75)',
-                padding: '3px 8px',
-                borderRadius: '2px',
-                letterSpacing: '0.05em',
-              }}
-            >
-              Plan Pro
-            </span>
           </div>
         </div>
+        <button
+          onClick={() => {
+            localStorage.removeItem('arthur_auth');
+            router.push('/');
+          }}
+          style={{
+            width: '100%',
+            fontFamily: 'DM Mono, monospace',
+            fontSize: '10px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            padding: '8px',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: 'rgba(255,255,255,0.5)',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+            borderRadius: '2px',
+          }}
+          onMouseOver={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+            e.currentTarget.style.color = 'rgba(255,255,255,0.8)';
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+            e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
+          }}
+        >
+          Cerrar sesión
+        </button>
       </div>
     </aside>
   );

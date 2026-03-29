@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Sidebar from '@/components/Sidebar';
 
 export const metadata: Metadata = {
-  title: 'Arthur-IA Legal — SUNARP',
+  title: 'Arthur — Asistente Legal IA',
   description: 'Seguimiento automático de trámites SUNARP con IA',
 };
 
@@ -23,22 +22,11 @@ export default function RootLayout({
       <body
         style={{
           height: '100%',
-          display: 'flex',
           background: 'var(--paper)',
           margin: 0,
         }}
       >
-        <Sidebar />
-        <main
-          style={{
-            marginLeft: '260px',
-            flex: 1,
-            minHeight: '100vh',
-            background: 'var(--paper)',
-          }}
-        >
-          {children}
-        </main>
+        {children}
       </body>
     </html>
   );

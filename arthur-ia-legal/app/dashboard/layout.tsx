@@ -1,0 +1,56 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Sidebar from '@/components/Sidebar';
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    const auth = localStorage.getItem('arthur_auth');
+    if (!auth) {
+      router.replace('/');
+    } else {
+      setAuthorized(true);
+    }
+  }, [router]);
+
+  if (!authorized) {
+    return (
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'DM Mono, monospace',
+        fontSize: '11px',
+        color: 'var(--muted)',
+        textTransform: 'uppercase',
+      }}>
+        Verificando acceso...
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', height: '100%' }}>
+      <Sidebar />
+      <main
+        style={{
+          marginLeft: '260px',
+          flex: 1,
+          minHeight: '100vh',
+          background: 'var(--paper)',
+        }}
+      >
+        {children}
+      </main>
+    </div>
+  );
+}
