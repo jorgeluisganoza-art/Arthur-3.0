@@ -345,8 +345,11 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           background: 'rgba(15,15,15,0.02)',
         }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: '10px' }}>
-            Verificación SUNARP (igual que Síguelo Plus)
+            Cloudflare Turnstile (misma verificación que en Síguelo Plus)
           </div>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--muted)', margin: '0 0 10px', lineHeight: 1.55 }}>
+            Si ves «No es posible conectarse», tu navegador no llega a <strong>challenges.cloudflare.com</strong> (antivirus, VPN, DNS, red corporativa o bloqueador). Nuestra consulta a SUNARP puede seguir intentándose igual; con verificación activa coincidimos mejor con la web oficial.
+          </p>
           <Turnstile
             ref={turnstileRef}
             siteKey={SUNARP_TURNSTILE_SITE_KEY}
@@ -355,16 +358,28 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
               setTurnstileToken(token);
               setTurnstileError(null);
             }}
-            onExpire={() => setTurnstileToken(null)}
-            onError={() => {
+            onExpire={() => {
               setTurnstileToken(null);
               setTurnstileError(null);
             }}
+            onError={code => {
+              setTurnstileToken(null);
+              setTurnstileError(
+                typeof code === 'string' && code
+                  ? `Turnstile (${code}). Revisa red/firewall o prueba desde otro dispositivo.`
+                  : 'Turnstile no pudo cargar. Revisa red, VPN o extensiones que bloqueen Cloudflare.',
+              );
+            }}
           />
+          {turnstileError && (
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#991b1b', margin: '10px 0 0', lineHeight: 1.5 }}>
+              {turnstileError}
+            </p>
+          )}
           <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--muted)', margin: '10px 0 0', lineHeight: 1.5 }}>
             {turnstileToken
-              ? 'Verificación completada. Usa Revisar ahora.'
-              : 'Si el recuadro no carga, puedes continuar igual — consultamos el API directamente sin necesidad del widget.'}
+              ? 'Verificación completada. Pulsa Revisar ahora (el token es de un solo uso).'
+              : 'Sin recuadro verde: igual puedes usar Revisar ahora; el backend prueba varias rutas y tipos de registro en la API SUNARP.'}
           </p>
         </div>
       )}

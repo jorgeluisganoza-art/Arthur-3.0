@@ -228,14 +228,16 @@ async function callConsultaTitulo(
   codigoZona: string,
   codigoOficina: string,
   turnstileToken?: string | null,
+  tipoRegistro?: string,
 ): Promise<{ response: ConsultaTituloResponse } | null> {
-  // Misma forma que Síguelo Plus (Angular): token CAPTCHA en clave literal dG9rZW4 (= "token" en base64).
+  // Misma forma que Síguelo Plus (Angular): token CAPTCHA en dG9rZW4; tipoRegistro como en detalleTitulo.
   const payload: Record<string, unknown> = {
     anioTitulo: anio,
     numeroTitulo: numero,
     codigoZona,
     codigoOficina,
     idAreaRegistro: codigoZona + codigoOficina,
+    tipoRegistro: tipoRegistro || '001',
     ip: '0.0.0.0',
     userApp: 'sigue+',
     userCrea: 'sigue+',
@@ -294,16 +296,24 @@ function parseConsultaTitulo(data: ConsultaTituloResponse): {
   calificador: string
 } {
   const titulos = data.lstTitulo || []
+  const desc = (data.descripcionRespuesta || '').trim()
+
   if (titulos.length === 0) {
-    return { estado: 'SIN DATOS', observacion: '', calificador: '' }
+    return { estado: 'SIN DATOS', observacion: desc, calificador: '' }
   }
 
   const titulo = titulos[0]
   const estado = classifyEstado(titulo.estadoActual || '')
 
+  const observacion = [
+    titulo.tipoRegistro && String(titulo.tipoRegistro),
+    titulo.areaRegistral && String(titulo.areaRegistral),
+    desc || undefined,
+  ].filter(Boolean).join(' · ')
+
   return {
     estado,
-    observacion: '',
+    observacion: observacion || desc,
     calificador: titulo.nombrePresentante || '',
   }
 }
@@ -358,39 +368,63 @@ async function attemptScrape(
     }
   }
 
-  // Tras detalleTitulo: consultaTitulo con token Turnstile (mismo flujo que la web) o sin token (sí devuelve 998).
-  const numeroNorm = normalizeNumeroTitulo(numero)
+  // Tras detalleTitulo: consultaTitulo (misma ruta que la web con Turnstile): número, tipo y token alineados a Síguelo Plus.
   const consultaAttempts: Array<string | null | undefined> = turnstileToken?.trim()
     ? [turnstileToken.trim(), null]
     : [null]
 
-  for (const token of consultaAttempts) {
-    try {
-      const result = await callConsultaTitulo(numeroNorm, anio, codigoZona, codigoOficina, token)
-      if (result?.response) {
-        const code = result.response.codigoRespuesta
-        const rawJson = JSON.stringify(result.response)
+  let lastConsulta0002: { response: ConsultaTituloResponse; rawJson: string } | null = null
 
-        if (code === '0000') {
-          const parsed = parseConsultaTitulo(result.response)
-          return buildResult(
-            parsed.estado, parsed.observacion, parsed.calificador,
-            false, 'consultaTitulo', code, rawJson,
+  for (const numStr of numVariants) {
+    for (const tipoRegistro of tipoTryOrder) {
+      for (const token of consultaAttempts) {
+        try {
+          const result = await callConsultaTitulo(
+            numStr, anio, codigoZona, codigoOficina, token, tipoRegistro,
           )
-        }
+          if (result?.response) {
+            const code = result.response.codigoRespuesta
+            const rawJson = JSON.stringify(result.response)
 
-        if (code === '998') {
-          console.warn(
-            token
-              ? '[SUNARP] consultaTitulo 998 con token (CAPTCHA inválido o dominio del widget no autorizado para esta clave)'
-              : '[SUNARP] consultaTitulo requiere CAPTCHA (sin token)',
-          )
+            if (code === '0000') {
+              const parsed = parseConsultaTitulo(result.response)
+              return buildResult(
+                parsed.estado, parsed.observacion, parsed.calificador,
+                false, 'consultaTitulo', code, rawJson,
+              )
+            }
+
+            if (code === '0002') {
+              lastConsulta0002 = { response: result.response, rawJson }
+              continue
+            }
+
+            if (code === '998') {
+              console.warn(
+                token
+                  ? '[SUNARP] consultaTitulo 998 con token (CAPTCHA inválido o dominio del widget no autorizado para esta clave)'
+                  : '[SUNARP] consultaTitulo requiere CAPTCHA (sin token)',
+              )
+            }
+          }
+        } catch (error: unknown) {
+          const msg = error instanceof Error ? error.message : String(error)
+          console.error('[SUNARP] consultaTitulo error:', msg)
         }
       }
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error)
-      console.error('[SUNARP] consultaTitulo error:', msg)
     }
+  }
+
+  if (lastConsulta0002) {
+    return buildResult(
+      'SIN DATOS',
+      lastConsulta0002.response.descripcionRespuesta ?? '',
+      '',
+      false,
+      'consultaTitulo',
+      lastConsulta0002.response.codigoRespuesta,
+      lastConsulta0002.rawJson,
+    )
   }
 
   if (last0002) {
