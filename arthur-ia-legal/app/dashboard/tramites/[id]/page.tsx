@@ -347,9 +347,6 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: '10px' }}>
             Verificación SUNARP (igual que Síguelo Plus)
           </div>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--muted)', lineHeight: 1.5, margin: '0 0 12px' }}>
-            Completa la comprobación y luego usa <strong>Revisar ahora</strong>. Si el recuadro no carga, el site key de SUNARP puede estar limitado a su dominio: igual puedes intentar la revisión sin token.
-          </p>
           <Turnstile
             ref={turnstileRef}
             siteKey={SUNARP_TURNSTILE_SITE_KEY}
@@ -359,16 +356,16 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
               setTurnstileError(null);
             }}
             onExpire={() => setTurnstileToken(null)}
-            onError={code => {
+            onError={() => {
               setTurnstileToken(null);
-              setTurnstileError(`Turnstile: ${code}`);
+              setTurnstileError(null);
             }}
           />
-          {turnstileError && (
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#991b1b', margin: '10px 0 0' }}>
-              {turnstileError}
-            </p>
-          )}
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'var(--muted)', margin: '10px 0 0', lineHeight: 1.5 }}>
+            {turnstileToken
+              ? 'Verificación completada. Usa Revisar ahora.'
+              : 'Si el recuadro no carga, puedes continuar igual — consultamos el API directamente sin necesidad del widget.'}
+          </p>
         </div>
       )}
 
