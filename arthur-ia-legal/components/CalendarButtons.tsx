@@ -41,7 +41,7 @@ export default function CalendarButtons({ title, date, description = '' }: Calen
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
     padding: '5px 10px',
-    border: '1px solid rgba(15,15,15,0.12)',
+    border: '1px solid var(--line-mid)',
     background: 'transparent',
     color: 'var(--muted)',
     cursor: 'pointer',
@@ -65,7 +65,7 @@ export default function CalendarButtons({ title, date, description = '' }: Calen
           e.currentTarget.style.color = '#4285f4';
         }}
         onMouseOut={e => {
-          e.currentTarget.style.borderColor = 'rgba(15,15,15,0.12)';
+          e.currentTarget.style.borderColor = 'var(--line-mid)';
           e.currentTarget.style.color = 'var(--muted)';
         }}
       >
@@ -84,7 +84,7 @@ export default function CalendarButtons({ title, date, description = '' }: Calen
           e.currentTarget.style.color = '#0078d4';
         }}
         onMouseOut={e => {
-          e.currentTarget.style.borderColor = 'rgba(15,15,15,0.12)';
+          e.currentTarget.style.borderColor = 'var(--line-mid)';
           e.currentTarget.style.color = 'var(--muted)';
         }}
       >

@@ -258,3 +258,107 @@ Cuando el escrito esté completo (isComplete:true), establece remainingFields co
     throw error;
   }
 }
+
+export async function clasificarMovimientoCEJ(
+  acto: string,
+  sumilla: string,
+  expediente: string
+): Promise<{ urgencia: 'alta' | 'normal' | 'info', sugerencia: string }> {
+  const prompt = `Eres un asistente legal especializado en derecho
+procesal peruano. Analiza este movimiento judicial del CEJ y
+determina su urgencia y qué debe hacer el abogado.
+
+Expediente: ${expediente}
+Acto procesal: ${acto}
+Sumilla: ${sumilla}
+
+Responde SOLO con JSON válido sin markdown:
+{
+  "urgencia": "alta|normal|info",
+  "sugerencia": "Acción concreta en 1-2 oraciones en español"
+}
+
+Criterios de urgencia:
+- ALTA: sentencias, autos que requieren respuesta con plazo,
+  notificaciones de audiencia próxima, resoluciones que
+  ordenan presentar escritos
+- NORMAL: decretos de trámite, proveídos rutinarios,
+  actualizaciones de estado
+- INFO: simples constancias, cargos de recepción`
+
+  try {
+    const judicialClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const response = await judicialClient.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 300,
+      messages: [{ role: 'user', content: prompt }]
+    })
+    const block = response.content[0]
+    const text = block.type === 'text' ? block.text : ''
+    const clean = text.replace(/```json|```/g, '').trim()
+    return JSON.parse(clean) as { urgencia: 'alta' | 'normal' | 'info', sugerencia: string }
+  } catch {
+    return { urgencia: 'info', sugerencia: 'Revisar el movimiento en el CEJ.' }
+  }
+}
+
+export async function generarEscritoJudicial(
+  tipo: string,
+  casoData: any,
+  instrucciones: string,
+  historialChat: any[]
+): Promise<{ message: string, documentContent: string, isComplete: boolean }> {
+  const systemPrompt = `Eres Arthur-IA, asistente legal especializado
+en redacción de escritos judiciales para el Poder Judicial del Perú.
+
+Contexto del proceso:
+- Expediente: ${casoData.numero_expediente}
+- Tipo: ${casoData.tipo_proceso}
+- Juzgado: ${casoData.organo_jurisdiccional}
+- Partes: ${casoData.partes}
+- Tipo de escrito: ${tipo}
+- Instrucciones del abogado: ${instrucciones || 'Sin instrucciones adicionales'}
+
+REGLAS:
+1. Una pregunta a la vez
+2. Cuando tengas suficiente información, genera el escrito completo
+3. Usa terminología procesal civil peruana correcta
+4. Cita el Código Procesal Civil (CPC) cuando corresponda
+5. Estructura: encabezado → hechos → derecho → petitorio → otrosíes
+6. Usa [CAMPO] para datos que aún necesitas
+7. Siempre incluir disclaimer de revisión profesional`
+
+  const judicialClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const messages =
+    Array.isArray(historialChat) && historialChat.length > 0
+      ? historialChat.map((m: { role?: string; content?: string }) => ({
+          role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
+          content: typeof m.content === 'string' ? m.content : String(m.content ?? ''),
+        }))
+      : [
+          {
+            role: 'user' as const,
+            content:
+              instrucciones?.trim() ||
+              'Comienza la redacción del escrito judicial según el tipo y el CPC peruano.',
+          },
+        ]
+
+  const response = await judicialClient.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 3000,
+    system: systemPrompt,
+    messages,
+  })
+
+  const block = response.content[0]
+  const text = block.type === 'text' ? block.text : ''
+  const isComplete = text.includes('SEÑOR JUEZ') || text.includes('POR TANTO')
+  const hasFields = text.includes('[')
+
+  return {
+    message: text,
+    documentContent: isComplete ? text : '',
+    isComplete: isComplete && !hasFields
+  }
+}

@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Arthur — Asistente Legal IA',
-  description: 'Seguimiento automático de trámites SUNARP con IA',
+  description: 'Seguimiento inteligente de trámites registrales y procesos judiciales',
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
     <html lang="es" style={{ height: '100%' }}>
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap"
           rel="stylesheet"
         />
       </head>
@@ -24,6 +24,7 @@ export default function RootLayout({
           height: '100%',
           background: 'var(--paper)',
           margin: 0,
+          color: 'var(--ink)',
         }}
       >
         {children}

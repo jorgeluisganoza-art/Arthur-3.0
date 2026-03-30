@@ -39,7 +39,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
+    <div className="workspace-light" style={{ display: 'flex', height: '100%', minHeight: '100vh', background: 'var(--paper)', color: 'var(--ink)' }}>
       <Sidebar />
       <main
         style={{
@@ -47,6 +47,7 @@ export default function DashboardLayout({
           flex: 1,
           minHeight: '100vh',
           background: 'var(--paper)',
+          color: 'var(--ink)',
         }}
       >
         {children}

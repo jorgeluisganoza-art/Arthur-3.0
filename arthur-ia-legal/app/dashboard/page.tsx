@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
   const actionsBtnBase: CSSProperties = {
     background: 'transparent',
-    border: '1px solid rgba(15,15,15,0.15)',
+    border: '1px solid var(--line-strong)',
     borderRadius: 0,
     padding: '6px 12px',
     fontFamily: 'DM Mono, monospace',
@@ -219,12 +219,12 @@ export default function DashboardPage() {
   return (
     <div style={{ padding: '48px 64px', background: 'var(--paper)', minHeight: '100vh' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', animation: 'fadeUp 0.4s ease forwards' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', animation: 'fadeUp 0.4s ease forwards', borderLeft: '4px solid #c2a46d', paddingLeft: '24px' }}>
         <div>
-          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--muted)', marginBottom: '8px' }}>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#c2a46d', marginBottom: '8px' }}>
             MIS TRÁMITES
           </div>
-          <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400, lineHeight: 1.1 }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400, lineHeight: 1.1 }}>
             Mis Trámites
           </h1>
         </div>
@@ -259,9 +259,14 @@ export default function DashboardPage() {
             key={card.label}
             className="animate-fadeUp"
             style={{
-              background: card.label === 'OBSERVADOS' && stats.observados > 0 ? 'rgba(153,27,27,0.04)' : 'white',
-              border: '1px solid rgba(15,15,15,0.08)',
-              borderTop: card.borderColor !== 'transparent' ? `3px solid ${card.borderColor}` : '1px solid rgba(15,15,15,0.08)',
+              background: card.label === 'OBSERVADOS' && stats.observados > 0 ? 'rgba(153,27,27,0.08)' : 'var(--surface)',
+              border: '1px solid var(--line)',
+              borderTop:
+                card.label === 'TOTAL'
+                  ? '3px solid #c2a46d'
+                  : card.borderColor !== 'transparent'
+                    ? `3px solid ${card.borderColor}`
+                    : '1px solid var(--line)',
               padding: '24px 28px',
               borderRadius: 0,
               animationDelay: `${card.delay}ms`,
@@ -271,7 +276,7 @@ export default function DashboardPage() {
             <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: card.color, marginBottom: '8px' }}>
               {card.label}
             </div>
-            <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '52px', color: card.color, lineHeight: 1 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '52px', color: card.color, lineHeight: 1 }}>
               {card.value}
             </div>
           </div>
@@ -300,7 +305,7 @@ export default function DashboardPage() {
       )}
 
       {/* Table */}
-      <div style={{ marginTop: '32px', background: 'white', border: '1px solid rgba(15,15,15,0.08)', overflow: 'visible', position: 'relative', zIndex: 0 }}>
+      <div style={{ marginTop: '32px', background: 'var(--surface)', border: '1px solid var(--line)', overflow: 'visible', position: 'relative', zIndex: 0 }}>
         {/* Header */}
         <div style={{
           display: 'grid',
@@ -325,7 +330,7 @@ export default function DashboardPage() {
         {/* Rows */}
         {tramites.length === 0 ? (
           <div style={{ padding: '64px 24px', textAlign: 'center' }}>
-            <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: 'var(--ink)', marginBottom: '12px' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '24px', color: 'var(--ink)', marginBottom: '12px' }}>
               Aún no tienes trámites
             </div>
             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', color: 'var(--muted)', marginBottom: '24px' }}>
@@ -354,9 +359,9 @@ export default function DashboardPage() {
                   padding: '0 24px',
                   minHeight: '64px',
                   alignItems: 'center',
-                  borderBottom: '1px solid rgba(15,15,15,0.06)',
+                  borderBottom: '1px solid var(--line-faint)',
                   borderLeft: isObservado ? '3px solid #991b1b' : '3px solid transparent',
-                  background: isPolling ? '#f7f7f7' : ps?.result ? 'rgba(247,247,247,0.6)' : 'white',
+                  background: isPolling ? 'rgba(194,164,109,0.1)' : ps?.result ? 'rgba(31,58,95,0.22)' : 'var(--surface)',
                   gap: '16px',
                   animationDelay: `${idx * 50}ms`,
                   transition: 'background 0.3s',
@@ -443,8 +448,8 @@ export default function DashboardPage() {
                             right: 0,
                             top: '100%',
                             marginTop: '4px',
-                            background: 'white',
-                            border: '1px solid rgba(15,15,15,0.1)',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--line-mid)',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                             zIndex: 460,
                             minWidth: '168px',
@@ -479,7 +484,7 @@ export default function DashboardPage() {
                               padding: '10px 16px',
                               background: 'none',
                               border: 'none',
-                              borderTop: '1px solid rgba(15,15,15,0.06)',
+                              borderTop: '1px solid var(--line-faint)',
                               fontFamily: 'DM Mono, monospace',
                               fontSize: '10px',
                               textTransform: 'uppercase',

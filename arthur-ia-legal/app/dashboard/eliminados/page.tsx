@@ -103,7 +103,7 @@ export default function EliminadosPage() {
         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--muted)', marginBottom: '8px' }}>
           ELIMINADOS
         </div>
-        <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400, lineHeight: 1.1 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400, lineHeight: 1.1 }}>
           Trámites Eliminados
         </h1>
         <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'var(--muted)', marginTop: '8px' }}>
@@ -111,7 +111,7 @@ export default function EliminadosPage() {
         </p>
       </div>
 
-      <div style={{ marginTop: '32px', background: 'white', border: '1px solid rgba(15,15,15,0.08)' }}>
+      <div style={{ marginTop: '32px', background: 'var(--surface)', border: '1px solid var(--line)' }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: '140px 100px 1fr 130px 100px 220px',
@@ -134,7 +134,7 @@ export default function EliminadosPage() {
 
         {tramites.length === 0 ? (
           <div style={{ padding: '64px 24px', textAlign: 'center' }}>
-            <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: 'var(--ink)', marginBottom: '12px' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '24px', color: 'var(--ink)', marginBottom: '12px' }}>
               No hay trámites eliminados
             </div>
             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', color: 'var(--muted)' }}>
@@ -153,7 +153,7 @@ export default function EliminadosPage() {
                   padding: '0 24px',
                   height: '64px',
                   alignItems: 'center',
-                  borderBottom: '1px solid rgba(15,15,15,0.06)',
+                  borderBottom: '1px solid var(--line-faint)',
                   gap: '16px',
                   opacity: 0.7,
                 }}
@@ -181,7 +181,7 @@ export default function EliminadosPage() {
                     onClick={() => handleRestore(t.id)}
                     style={{
                       background: 'transparent',
-                      border: '1px solid rgba(15,15,15,0.15)',
+                      border: '1px solid var(--line-strong)',
                       borderRadius: 0,
                       padding: '6px 12px',
                       fontFamily: 'DM Mono, monospace',
@@ -219,7 +219,7 @@ export default function EliminadosPage() {
                         onClick={() => setConfirmId(null)}
                         style={{
                           background: 'transparent',
-                          border: '1px solid rgba(15,15,15,0.15)',
+                          border: '1px solid var(--line-strong)',
                           borderRadius: 0,
                           padding: '6px 10px',
                           fontFamily: 'DM Mono, monospace',

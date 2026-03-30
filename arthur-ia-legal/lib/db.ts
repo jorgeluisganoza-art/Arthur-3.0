@@ -85,6 +85,78 @@ function initSchema(db: Database.Database) {
       enviado_at TEXT DEFAULT (datetime('now')),
       success INTEGER DEFAULT 1
     );
+
+    CREATE TABLE IF NOT EXISTS casos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      numero_expediente TEXT NOT NULL,
+      distrito_judicial TEXT NOT NULL,
+      organo_jurisdiccional TEXT,
+      juez TEXT,
+      tipo_proceso TEXT,
+      especialidad TEXT,
+      etapa_procesal TEXT,
+      partes TEXT,
+      cliente TEXT,
+      alias TEXT,
+      monto TEXT,
+      prioridad TEXT DEFAULT 'baja',
+      estado TEXT DEFAULT 'activo',
+      ultimo_movimiento TEXT,
+      ultimo_movimiento_fecha TEXT,
+      proximo_evento TEXT,
+      proximo_evento_fecha TEXT,
+      estado_hash TEXT,
+      polling_frequency_hours INTEGER DEFAULT 4,
+      whatsapp_number TEXT,
+      email TEXT,
+      activo INTEGER DEFAULT 1,
+      last_checked TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS movimientos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      caso_id INTEGER NOT NULL REFERENCES casos(id),
+      fecha TEXT,
+      acto TEXT,
+      folio TEXT,
+      sumilla TEXT,
+      es_nuevo INTEGER DEFAULT 1,
+      urgencia TEXT DEFAULT 'info',
+      ai_sugerencia TEXT,
+      scraped_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS audiencias (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      caso_id INTEGER NOT NULL REFERENCES casos(id),
+      descripcion TEXT NOT NULL,
+      fecha TEXT NOT NULL,
+      tipo TEXT,
+      completado INTEGER DEFAULT 0,
+      google_calendar_link TEXT,
+      outlook_link TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS escritos_judiciales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      caso_id INTEGER NOT NULL REFERENCES casos(id),
+      tipo TEXT NOT NULL,
+      contenido TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS notificaciones_judiciales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      caso_id INTEGER REFERENCES casos(id),
+      canal TEXT NOT NULL,
+      movimiento_descripcion TEXT,
+      urgencia TEXT,
+      ai_sugerencia TEXT,
+      enviado_at TEXT DEFAULT (datetime('now')),
+      success INTEGER DEFAULT 1
+    );
   `);
 
   // Migrate: add archived_at/deleted_at columns if missing
@@ -108,6 +180,11 @@ function initSchema(db: Database.Database) {
   const count = db.prepare('SELECT COUNT(*) as c FROM tramites').get() as { c: number };
   if (count.c === 0) {
     seedData(db);
+  }
+
+  const casosCount = db.prepare('SELECT COUNT(*) as c FROM casos').get() as { c: number };
+  if (casosCount.c === 0) {
+    seedJudicialData(db);
   }
 }
 
@@ -162,6 +239,82 @@ function seedData(db: Database.Database) {
     'Se observa el título por los siguientes motivos: 1) El plano de localización no coincide con las coordenadas UTM consignadas en la memoria descriptiva.',
     1
   );
+}
+
+function seedJudicialData(db: Database.Database) {
+  const now = new Date();
+  const fecha30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const fecha45 = new Date(now.getTime() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const insertCaso = db.prepare(`
+    INSERT INTO casos (
+      numero_expediente, distrito_judicial, organo_jurisdiccional, juez, tipo_proceso,
+      etapa_procesal, partes, cliente, alias, monto, prioridad, ultimo_movimiento,
+      ultimo_movimiento_fecha, polling_frequency_hours, activo
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const c1 = insertCaso.run(
+    '10001-2022-0-1801-JR-CI-01',
+    'Lima',
+    '1er Juzgado Civil de Lima',
+    'Dr. Marcos Villanueva Torres',
+    'Civil',
+    'Probatoria',
+    '[{"rol":"demandante","nombre":"Constructora Andina SAC"},{"rol":"demandado","nombre":"Municipalidad de Lima"}]',
+    'Constructora Andina SAC',
+    'Constructora Andina vs Municipalidad',
+    'PEN 450,000',
+    'baja',
+    'Período de prueba ampliado',
+    '2025-02-03',
+    4,
+    1
+  );
+
+  insertCaso.run(
+    '10002-2023-0-1801-JR-LA-02',
+    'Arequipa',
+    '2do Juzgado Laboral de Arequipa',
+    null,
+    'Laboral',
+    'Instrucción',
+    '[{"rol":"demandante","nombre":"Juan Pérez Ríos"},{"rol":"demandado","nombre":"Empresa Minera del Sur SAC"}]',
+    'Juan Pérez Ríos',
+    'Pérez vs Minera Sur',
+    null,
+    'media',
+    null,
+    null,
+    4,
+    1
+  );
+
+  insertCaso.run(
+    '10003-2024-0-1801-JR-PE-03',
+    'Cusco',
+    null,
+    null,
+    'Penal',
+    'Juicio oral',
+    null,
+    null,
+    'Caso Banco Comercial',
+    null,
+    'alta',
+    null,
+    null,
+    2,
+    1
+  );
+
+  const caso1Id = c1.lastInsertRowid as number;
+  const insertAudiencia = db.prepare(`
+    INSERT INTO audiencias (caso_id, descripcion, fecha, tipo)
+    VALUES (?, ?, ?, ?)
+  `);
+  insertAudiencia.run(caso1Id, 'Presentación de descargos', fecha30, 'plazo');
+  insertAudiencia.run(caso1Id, 'Audiencia de pruebas', fecha45, 'audiencia');
 }
 
 // ── Query helpers ────────────────────────────────────────────────────────────
@@ -376,6 +529,254 @@ export function saveDocument(tramiteId: number, tipo: string, contenido: string)
     INSERT INTO documentos (tramite_id, tipo, contenido)
     VALUES (?, ?, ?)
   `).run(tramiteId, tipo, contenido);
+}
+
+// ── Judicial module helpers ───────────────────────────────────────────────────
+
+export interface Caso {
+  id: number;
+  numero_expediente: string;
+  distrito_judicial: string;
+  organo_jurisdiccional: string | null;
+  juez: string | null;
+  tipo_proceso: string | null;
+  especialidad: string | null;
+  etapa_procesal: string | null;
+  partes: string | null;
+  cliente: string | null;
+  alias: string | null;
+  monto: string | null;
+  prioridad: 'alta' | 'media' | 'baja';
+  estado: 'activo' | 'concluido' | 'archivado';
+  ultimo_movimiento: string | null;
+  ultimo_movimiento_fecha: string | null;
+  proximo_evento: string | null;
+  proximo_evento_fecha: string | null;
+  estado_hash: string | null;
+  polling_frequency_hours: number;
+  whatsapp_number: string | null;
+  email: string | null;
+  activo: number;
+  last_checked: string | null;
+  created_at: string;
+}
+
+export interface MovimientoJudicial {
+  id: number;
+  caso_id: number;
+  fecha: string | null;
+  acto: string | null;
+  folio: string | null;
+  sumilla: string | null;
+  es_nuevo: number;
+  urgencia: 'alta' | 'normal' | 'info';
+  ai_sugerencia: string | null;
+  scraped_at: string;
+}
+
+export interface AudienciaJudicial {
+  id: number;
+  caso_id: number;
+  descripcion: string;
+  fecha: string;
+  tipo: string | null;
+  completado: number;
+  google_calendar_link: string | null;
+  outlook_link: string | null;
+  created_at: string;
+}
+
+export interface EscritoJudicial {
+  id: number;
+  caso_id: number;
+  tipo: string;
+  contenido: string;
+  created_at: string;
+}
+
+export interface NotificacionJudicial {
+  id: number;
+  caso_id: number | null;
+  canal: string;
+  movimiento_descripcion: string | null;
+  urgencia: string | null;
+  ai_sugerencia: string | null;
+  enviado_at: string;
+  success: number;
+}
+
+export function getAllCasosActivos(): Caso[] {
+  return getDb().prepare(
+    'SELECT * FROM casos WHERE activo = 1 ORDER BY created_at DESC'
+  ).all() as Caso[];
+}
+
+export function getCasoById(id: number): Caso | null {
+  return getDb().prepare('SELECT * FROM casos WHERE id = ?').get(id) as Caso | null;
+}
+
+export function createCaso(data: Partial<Caso>): Caso {
+  const db = getDb();
+  const result = db.prepare(`
+    INSERT INTO casos (
+      numero_expediente, distrito_judicial, organo_jurisdiccional, juez, tipo_proceso,
+      especialidad, etapa_procesal, partes, cliente, alias, monto, prioridad, estado,
+      ultimo_movimiento, ultimo_movimiento_fecha, proximo_evento, proximo_evento_fecha,
+      estado_hash, polling_frequency_hours, whatsapp_number, email, activo, last_checked
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    data.numero_expediente,
+    data.distrito_judicial,
+    data.organo_jurisdiccional ?? null,
+    data.juez ?? null,
+    data.tipo_proceso ?? null,
+    data.especialidad ?? null,
+    data.etapa_procesal ?? null,
+    data.partes ?? null,
+    data.cliente ?? null,
+    data.alias ?? null,
+    data.monto ?? null,
+    data.prioridad ?? 'baja',
+    data.estado ?? 'activo',
+    data.ultimo_movimiento ?? null,
+    data.ultimo_movimiento_fecha ?? null,
+    data.proximo_evento ?? null,
+    data.proximo_evento_fecha ?? null,
+    data.estado_hash ?? null,
+    data.polling_frequency_hours ?? 4,
+    data.whatsapp_number ?? null,
+    data.email ?? null,
+    data.activo ?? 1,
+    data.last_checked ?? null
+  );
+
+  return getCasoById(result.lastInsertRowid as number)!;
+}
+
+export function updateCaso(id: number, data: Partial<Caso>) {
+  const db = getDb();
+  const fields = Object.keys(data).filter(k => k !== 'id');
+  if (fields.length === 0) return;
+  const setClause = fields.map(f => `${f} = ?`).join(', ');
+  const values = fields.map(f => (data as Record<string, unknown>)[f]);
+  db.prepare(`UPDATE casos SET ${setClause} WHERE id = ?`).run(...values, id);
+}
+
+export function softDeleteCaso(id: number) {
+  getDb().prepare('UPDATE casos SET activo = 0 WHERE id = ?').run(id);
+}
+
+export function getMovimientosByCaso(casoId: number): MovimientoJudicial[] {
+  return getDb().prepare(
+    'SELECT * FROM movimientos WHERE caso_id = ? ORDER BY scraped_at DESC, id DESC'
+  ).all(casoId) as MovimientoJudicial[];
+}
+
+export function addMovimientoJudicial(
+  casoId: number,
+  data: {
+    fecha?: string | null;
+    acto?: string | null;
+    folio?: string | null;
+    sumilla?: string | null;
+    es_nuevo?: boolean;
+    urgencia?: 'alta' | 'normal' | 'info';
+    ai_sugerencia?: string | null;
+  }
+) {
+  getDb().prepare(`
+    INSERT INTO movimientos (caso_id, fecha, acto, folio, sumilla, es_nuevo, urgencia, ai_sugerencia)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    casoId,
+    data.fecha ?? null,
+    data.acto ?? null,
+    data.folio ?? null,
+    data.sumilla ?? null,
+    data.es_nuevo === false ? 0 : 1,
+    data.urgencia ?? 'info',
+    data.ai_sugerencia ?? null
+  );
+}
+
+export function getAudienciasByCaso(casoId: number): AudienciaJudicial[] {
+  return getDb().prepare(
+    'SELECT * FROM audiencias WHERE caso_id = ? ORDER BY fecha ASC'
+  ).all(casoId) as AudienciaJudicial[];
+}
+
+export function getAllAudienciasPendientes(): Array<AudienciaJudicial & { alias: string | null; tipo_proceso: string | null }> {
+  return getDb().prepare(`
+    SELECT a.*, c.alias, c.tipo_proceso
+    FROM audiencias a
+    JOIN casos c ON a.caso_id = c.id
+    WHERE a.completado = 0 AND c.activo = 1
+    ORDER BY a.fecha ASC
+  `).all() as Array<AudienciaJudicial & { alias: string | null; tipo_proceso: string | null }>;
+}
+
+export function addAudienciaJudicial(
+  casoId: number,
+  descripcion: string,
+  fecha: string,
+  tipo?: string
+) {
+  getDb().prepare(`
+    INSERT INTO audiencias (caso_id, descripcion, fecha, tipo)
+    VALUES (?, ?, ?, ?)
+  `).run(casoId, descripcion, fecha, tipo ?? null);
+}
+
+export function getEscritosByCaso(casoId: number): EscritoJudicial[] {
+  return getDb().prepare(
+    'SELECT * FROM escritos_judiciales WHERE caso_id = ? ORDER BY created_at DESC'
+  ).all(casoId) as EscritoJudicial[];
+}
+
+export function saveEscritoJudicial(casoId: number, tipo: string, contenido: string) {
+  getDb().prepare(`
+    INSERT INTO escritos_judiciales (caso_id, tipo, contenido)
+    VALUES (?, ?, ?)
+  `).run(casoId, tipo, contenido);
+}
+
+export function getNotificacionesJudicialesByCaso(casoId: number, limit = 5): NotificacionJudicial[] {
+  return getDb().prepare(
+    'SELECT * FROM notificaciones_judiciales WHERE caso_id = ? ORDER BY enviado_at DESC LIMIT ?'
+  ).all(casoId, limit) as NotificacionJudicial[];
+}
+
+export function logNotificacionJudicial(
+  casoId: number,
+  canal: string,
+  movimientoDescripcion: string,
+  urgencia: string,
+  aiSugerencia: string,
+  success: boolean
+) {
+  getDb().prepare(`
+    INSERT INTO notificaciones_judiciales (caso_id, canal, movimiento_descripcion, urgencia, ai_sugerencia, success)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(casoId, canal, movimientoDescripcion, urgencia, aiSugerencia, success ? 1 : 0);
+}
+
+export function getCasosStats() {
+  const db = getDb();
+  const total = (db.prepare('SELECT COUNT(*) as c FROM casos').get() as { c: number }).c;
+  const activos = (db.prepare('SELECT COUNT(*) as c FROM casos WHERE activo = 1').get() as { c: number }).c;
+  const conAlerta = (db.prepare(
+    "SELECT COUNT(DISTINCT caso_id) as c FROM movimientos WHERE es_nuevo = 1 AND urgencia = 'alta'"
+  ).get() as { c: number }).c;
+  const proximasAudiencias = (db.prepare(`
+    SELECT COUNT(*) as c
+    FROM audiencias a
+    JOIN casos c ON c.id = a.caso_id
+    WHERE c.activo = 1
+      AND a.completado = 0
+      AND date(a.fecha) BETWEEN date('now') AND date('now', '+7 day')
+  `).get() as { c: number }).c;
+
+  return { total, activos, conAlerta, proximasAudiencias };
 }
 
 export default getDb;

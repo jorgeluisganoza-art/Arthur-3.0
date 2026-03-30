@@ -156,8 +156,8 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
   }
 
   const inputStyle: React.CSSProperties = {
-    background: 'white',
-    border: '1px solid rgba(15,15,15,0.15)',
+    background: 'var(--surface)',
+    border: '1px solid var(--line-strong)',
     borderRadius: 0,
     padding: '12px 16px',
     fontFamily: 'Inter, sans-serif',
@@ -187,7 +187,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(15,15,15,0.4)',
+          background: 'var(--overlay-scrim)',
           zIndex: 200,
         }}
       />
@@ -202,7 +202,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
           width: '480px',
           height: '100vh',
           background: 'var(--paper)',
-          borderLeft: '1px solid rgba(15,15,15,0.1)',
+          borderLeft: '1px solid var(--line-mid)',
           zIndex: 300,
           overflowY: 'auto',
           padding: '40px 36px',
@@ -227,10 +227,10 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
         </button>
 
         {/* Header */}
-        <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '28px', color: 'var(--ink)', fontWeight: 400 }}>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '28px', color: 'var(--ink)', fontWeight: 400 }}>
           Nuevo trámite
         </h2>
-        <div style={{ width: '60px', height: '2px', background: '#1a3d2b', marginTop: '12px', marginBottom: '28px' }} />
+        <div style={{ width: '60px', height: '2px', background: 'var(--accent)', marginTop: '12px', marginBottom: '28px' }} />
 
         {/* Tipo selector */}
         <label style={labelStyle}>TIPO DE TRÁMITE</label>
@@ -241,8 +241,8 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
               onClick={() => setTipo(opt.value)}
               style={{
                 position: 'relative',
-                background: 'white',
-                border: tipo === opt.value ? '2px solid var(--ink)' : '1px solid rgba(15,15,15,0.1)',
+                background: 'var(--surface)',
+                border: tipo === opt.value ? '2px solid var(--ink)' : '1px solid var(--line-mid)',
                 borderRadius: 0,
                 padding: '20px 16px',
                 textAlign: 'center',
@@ -281,7 +281,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
               }
               style={inputStyle}
               onFocus={e => { e.currentTarget.style.borderColor = 'var(--ink)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(15,15,15,0.15)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-strong)'; }}
             />
           </div>
 
@@ -296,7 +296,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
               max="2030"
               style={inputStyle}
               onFocus={e => { e.currentTarget.style.borderColor = 'var(--ink)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(15,15,15,0.15)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-strong)'; }}
             />
           </div>
 
@@ -324,7 +324,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
               placeholder="Ej: Casa San Borja"
               style={inputStyle}
               onFocus={e => { e.currentTarget.style.borderColor = 'var(--ink)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(15,15,15,0.15)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-strong)'; }}
             />
           </div>
         </div>
@@ -344,7 +344,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
                 style={{
                   width: '44px',
                   height: '24px',
-                  background: whatsappEnabled ? '#1a3d2b' : 'rgba(15,15,15,0.15)',
+                  background: whatsappEnabled ? 'var(--accent-navy)' : 'var(--line-strong)',
                   borderRadius: '12px',
                   position: 'relative',
                   cursor: 'pointer',
@@ -358,7 +358,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
                   width: '20px',
                   height: '20px',
                   borderRadius: '50%',
-                  background: 'white',
+                  background: 'var(--surface)',
                   transition: 'left 0.2s',
                 }} />
               </div>
@@ -375,7 +375,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
                   placeholder="999000000"
                   style={{ ...inputStyle }}
                   onFocus={e => { e.currentTarget.style.borderColor = 'var(--ink)'; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(15,15,15,0.15)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-strong)'; }}
                 />
               </div>
             )}
@@ -392,7 +392,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
                 style={{
                   width: '44px',
                   height: '24px',
-                  background: emailEnabled ? '#1a3d2b' : 'rgba(15,15,15,0.15)',
+                  background: emailEnabled ? 'var(--accent-navy)' : 'var(--line-strong)',
                   borderRadius: '12px',
                   position: 'relative',
                   cursor: 'pointer',
@@ -406,7 +406,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
                   width: '20px',
                   height: '20px',
                   borderRadius: '50%',
-                  background: 'white',
+                  background: 'var(--surface)',
                   transition: 'left 0.2s',
                 }} />
               </div>
@@ -419,7 +419,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
                 placeholder="tu@email.com"
                 style={inputStyle}
                 onFocus={e => { e.currentTarget.style.borderColor = 'var(--ink)'; }}
-                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(15,15,15,0.15)'; }}
+                onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-strong)'; }}
               />
             )}
           </div>
@@ -434,9 +434,9 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
                 key={opt.value}
                 onClick={() => setFrecuencia(opt.value)}
                 style={{
-                  background: frecuencia === opt.value ? 'var(--ink)' : 'white',
+                  background: frecuencia === opt.value ? 'var(--ink)' : 'var(--surface)',
                   color: frecuencia === opt.value ? 'var(--paper)' : 'var(--ink)',
-                  border: '1px solid rgba(15,15,15,0.15)',
+                  border: '1px solid var(--line-strong)',
                   borderRadius: 0,
                   padding: '8px 14px',
                   fontFamily: 'Inter, sans-serif',
@@ -457,7 +457,7 @@ export default function AddTramiteDrawer({ open, onClose, onSuccess }: AddTramit
           disabled={submitting || !numero || !alias}
           style={{
             width: '100%',
-            background: submitting || !numero || !alias ? 'rgba(15,15,15,0.3)' : 'var(--ink)',
+            background: submitting || !numero || !alias ? 'rgba(255,255,255,0.1)' : 'var(--ink)',
             color: 'var(--paper)',
             border: 'none',
             borderRadius: 0,

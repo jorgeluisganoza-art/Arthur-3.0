@@ -1,13 +1,65 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #111111;
+  /* Premium dark palette */
+  --bg: #0b0b0b;
+  --paper: #0b0b0b;
+  --surface: #141414;
+  --surface-elevated: #1a1a1a;
+  --paper-dark: #101010;
+  --ink: #f5f5f5;
+  --muted: #9ca3af;
+  --accent: #c2a46d;
+  --accent-navy: #1f3a5f;
+  --accent-light: rgba(194, 164, 109, 0.12);
+  --blue: #1f3a5f;
+  /* Sidebar: true black, separated from main canvas (--paper) */
+  --sidebar-bg: #000000;
+  --sidebar-edge: rgba(194, 164, 109, 0.18);
+  --line-faint: rgba(255, 255, 255, 0.06);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-mid: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.15);
+  --overlay-scrim: rgba(0, 0, 0, 0.55);
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+  /* App workspace (registral / judicial): light surfaces */
+  --sidebar-text: #f5f5f5;
+  --sidebar-muted: rgba(255, 255, 255, 0.45);
+  --sidebar-active-bg: rgba(255, 255, 255, 0.1);
+  --sidebar-avatar-bg: rgba(255, 255, 255, 0.15);
+  --sidebar-btn-bg: rgba(255, 255, 255, 0.08);
+  --sidebar-btn-border: rgba(255, 255, 255, 0.12);
+  --sidebar-btn-fg: rgba(255, 255, 255, 0.55);
+  --sidebar-shadow: 4px 0 32px rgba(0, 0, 0, 0.65);
+  --sidebar-module-label: rgba(255, 255, 255, 0.4);
+}
+
+/* Registral + judicial: white canvas, black type, gold accents */
+.workspace-light {
+  --ink: #141414;
+  --muted: #525252;
   --paper: #ffffff;
-  --paper-dark: #f7f7f7;
-  --accent: #1a3d2b;
-  --accent-light: #e8f0eb;
-  --blue: #1a3d2b;
-  --muted: #888888;
+  --surface: #f7f7f7;
+  --surface-elevated: #efefef;
+  --paper-dark: #f0f0f0;
+  --line-faint: rgba(0, 0, 0, 0.06);
+  --line: rgba(0, 0, 0, 0.1);
+  --line-mid: rgba(0, 0, 0, 0.14);
+  --line-strong: rgba(0, 0, 0, 0.2);
+  --sidebar-bg: #fafafa;
+  --sidebar-edge: rgba(194, 164, 109, 0.42);
+  --sidebar-text: #141414;
+  --sidebar-muted: rgba(0, 0, 0, 0.52);
+  --sidebar-active-bg: rgba(194, 164, 109, 0.16);
+  --sidebar-hover-bg: rgba(194, 164, 109, 0.08);
+  --sidebar-avatar-bg: rgba(194, 164, 109, 0.22);
+  --sidebar-btn-bg: rgba(0, 0, 0, 0.04);
+  --sidebar-btn-border: rgba(194, 164, 109, 0.35);
+  --sidebar-btn-fg: rgba(0, 0, 0, 0.55);
+  --sidebar-module-label: rgba(0, 0, 0, 0.42);
+  --sidebar-shadow: 2px 0 24px rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -24,8 +76,8 @@ body {
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  font-family: var(--font-body);
+  font-size: 15px;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
 }
@@ -38,50 +90,56 @@ a {
 input,
 select,
 textarea {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-body);
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.font-display {
+  font-family: var(--font-display);
 }
 
 .badge {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 4px 10px;
-  border-radius: 2px;
+  border-radius: 4px;
   display: inline-block;
 }
 
 .badge-observado {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  background: rgba(153, 27, 27, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(248, 113, 113, 0.35);
 }
 
 .badge-pendiente {
-  background: #fffbeb;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background: rgba(217, 119, 6, 0.15);
+  color: #fcd34d;
+  border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
 .badge-inscrito {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
+  background: rgba(22, 101, 52, 0.2);
+  color: #86efac;
+  border: 1px solid rgba(74, 222, 128, 0.35);
 }
 
 .badge-tacha {
-  background: #fef2f2;
-  color: #7f1d1d;
-  border: 1px solid #fecaca;
+  background: rgba(127, 29, 29, 0.25);
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.35);
 }
 
 .badge-sin-datos {
-  background: rgba(136, 136, 136, 0.1);
+  background: rgba(156, 163, 175, 0.12);
   color: var(--muted);
-  border: 1px solid rgba(136, 136, 136, 0.15);
+  border: 1px solid var(--line);
 }
 
-/* Animations */
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -191,7 +249,7 @@ textarea {
 }
 
 .campo-placeholder {
-  background: rgba(26, 61, 43, 0.1);
+  background: rgba(194, 164, 109, 0.15);
   color: var(--accent);
   padding: 0 4px;
   border-radius: 2px;
@@ -199,6 +257,6 @@ textarea {
 }
 
 .doc-highlight {
-  background: rgba(234, 179, 8, 0.2);
+  background: rgba(194, 164, 109, 0.2);
   transition: background 0.8s ease-out;
 }

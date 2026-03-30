@@ -103,7 +103,7 @@ export default function ChatPage() {
       {/* Header */}
       <div style={{
         padding: '24px 48px',
-        borderBottom: '1px solid rgba(15,15,15,0.06)',
+        borderBottom: '1px solid var(--line-faint)',
         flexShrink: 0,
       }}>
         <div style={{
@@ -123,7 +123,7 @@ export default function ChatPage() {
               ASISTENTE LEGAL IA
             </div>
             <h1 style={{
-              fontFamily: 'DM Serif Display, serif',
+              fontFamily: 'var(--font-display)',
               fontSize: '28px',
               color: 'var(--ink)',
               fontWeight: 400,
@@ -146,7 +146,7 @@ export default function ChatPage() {
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                     padding: '6px 12px',
-                    border: `1px solid ${selectedProvider === p ? providerLabels[p].color : 'rgba(15,15,15,0.1)'}`,
+                    border: `1px solid ${selectedProvider === p ? providerLabels[p].color : 'var(--line-mid)'}`,
                     background: selectedProvider === p ? `${providerLabels[p].color}10` : 'transparent',
                     color: selectedProvider === p ? providerLabels[p].color : 'var(--muted)',
                     cursor: 'pointer',
@@ -178,10 +178,10 @@ export default function ChatPage() {
           }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{
-                fontFamily: 'DM Serif Display, serif',
+                fontFamily: 'var(--font-display)',
                 fontSize: '36px',
                 fontStyle: 'italic',
-                color: '#1a3d2b',
+                color: 'var(--accent-navy)',
                 marginBottom: '8px',
               }}>
                 arthur
@@ -210,16 +210,16 @@ export default function ChatPage() {
                     fontFamily: 'Inter, sans-serif',
                     fontSize: '13px',
                     color: 'var(--ink)',
-                    background: 'white',
-                    border: '1px solid rgba(15,15,15,0.08)',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--line)',
                     padding: '14px 16px',
                     textAlign: 'left',
                     cursor: 'pointer',
                     lineHeight: '1.4',
                     transition: 'border-color 0.15s',
                   }}
-                  onMouseOver={e => { e.currentTarget.style.borderColor = 'rgba(15,15,15,0.25)'; }}
-                  onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(15,15,15,0.08)'; }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--line-strong)'; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--line)'; }}
                 >
                   {q}
                 </button>
@@ -248,9 +248,9 @@ export default function ChatPage() {
                   </div>
                 )}
                 <div style={{
-                  background: msg.role === 'user' ? '#1a3d2b' : 'white',
+                  background: msg.role === 'user' ? 'var(--accent-navy)' : 'var(--surface)',
                   color: msg.role === 'user' ? 'white' : 'var(--ink)',
-                  border: msg.role === 'user' ? 'none' : '1px solid rgba(15,15,15,0.08)',
+                  border: msg.role === 'user' ? 'none' : '1px solid var(--line)',
                   padding: '16px 20px',
                   maxWidth: '85%',
                   fontFamily: 'Inter, sans-serif',
@@ -280,7 +280,7 @@ export default function ChatPage() {
       {/* Input */}
       <div style={{
         padding: '16px 48px 24px',
-        borderTop: '1px solid rgba(15,15,15,0.06)',
+        borderTop: '1px solid var(--line-faint)',
         flexShrink: 0,
       }}>
         <div style={{
@@ -301,8 +301,8 @@ export default function ChatPage() {
               fontFamily: 'Inter, sans-serif',
               fontSize: '14px',
               padding: '14px 18px',
-              border: '1px solid rgba(15,15,15,0.12)',
-              background: 'white',
+              border: '1px solid var(--line-mid)',
+              background: 'var(--surface)',
               color: 'var(--ink)',
               resize: 'none',
               outline: 'none',
@@ -325,7 +325,7 @@ export default function ChatPage() {
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
               padding: '14px 24px',
-              background: input.trim() && !loading ? '#1a3d2b' : 'rgba(15,15,15,0.05)',
+              background: input.trim() && !loading ? 'var(--accent-navy)' : 'var(--line-faint)',
               color: input.trim() && !loading ? 'white' : 'var(--muted)',
               border: 'none',
               cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',

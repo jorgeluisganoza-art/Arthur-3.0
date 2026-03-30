@@ -4,104 +4,108 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AnimatedBackground from '@/components/AnimatedBackground';
 
+/** Misma caja para «arthur» y «Empieza Ahora» (hover). */
+const LOGO_BOX = {
+  width: 'min(88vw, 420px)',
+  height: '112px',
+  boxSizing: 'border-box' as const,
+};
+
 export default function LandingPage() {
   const router = useRouter();
-  const [hovered, setHovered] = useState(false);
+  const [hoverLogo, setHoverLogo] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem('arthur_auth')) {
-      router.replace('/dashboard');
+      router.replace('/select');
     }
   }, [router]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        minHeight: '100vh',
+        overflow: 'hidden',
+        background: '#000000',
+      }}
+    >
       <AnimatedBackground />
 
       <div
         style={{
           position: 'relative',
           zIndex: 2,
+          minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100%',
+          padding: 'clamp(32px, 6vw, 64px)',
           textAlign: 'center',
-          padding: '0 24px',
         }}
       >
-        <div
+        <button
+          type="button"
           onClick={() => router.push('/login')}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
+          onMouseEnter={() => setHoverLogo(true)}
+          onMouseLeave={() => setHoverLogo(false)}
+          aria-label={hoverLogo ? 'Empieza ahora' : 'arthur'}
           style={{
-            cursor: 'pointer',
+            ...LOGO_BOX,
             position: 'relative',
+            background: 'transparent',
+            border: hoverLogo ? '1px solid rgba(255, 255, 255, 0.92)' : '1px solid transparent',
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: '130px',
-            animation: 'fadeUp 0.8s ease forwards',
+            padding: '0 16px',
+            transition: 'border-color 0.2s ease',
           }}
         >
-          <h1
+          <span
             style={{
-              fontFamily: 'DM Serif Display, serif',
-              fontStyle: 'italic',
-              fontSize: 'clamp(72px, 10vw, 120px)',
+              fontFamily: hoverLogo
+                ? 'var(--font-body), Inter, system-ui, sans-serif'
+                : 'var(--font-display), Georgia, serif',
+              fontSize: hoverLogo
+                ? 'clamp(0.8rem, 2.1vw, 1rem)'
+                : 'clamp(2.6rem, 7vw, 3.85rem)',
+              fontWeight: hoverLogo ? 600 : 500,
+              fontStyle: hoverLogo ? 'normal' : 'italic',
               color: '#ffffff',
-              fontWeight: 400,
-              letterSpacing: '-0.02em',
-              lineHeight: 1,
-              margin: 0,
-              transition: 'opacity 0.35s ease, transform 0.35s ease, text-shadow 0.35s ease',
-              opacity: hovered ? 0 : 1,
-              transform: hovered ? 'scale(0.95)' : 'scale(1)',
-              textShadow: '0 0 40px rgba(255, 255, 255, 0.2)',
-            }}
-          >
-            arthur
-          </h1>
-
-          <div
-            style={{
-              position: 'absolute',
-              fontFamily: 'DM Mono, monospace',
-              fontSize: 'clamp(13px, 1.5vw, 16px)',
-              fontWeight: 500,
-              textTransform: 'uppercase',
-              letterSpacing: '0.15em',
-              color: '#ffffff',
-              transition: 'opacity 0.35s ease, transform 0.35s ease',
-              opacity: hovered ? 1 : 0,
-              transform: hovered ? 'scale(1)' : 'scale(1.05)',
-              padding: '22px 52px',
-              border: '1px solid rgba(255,255,255,0.35)',
+              letterSpacing: hoverLogo ? '0.08em' : '-0.02em',
+              lineHeight: 1.05,
               whiteSpace: 'nowrap',
             }}
           >
-            Empieza ahora &rarr;
-          </div>
-        </div>
-      </div>
+            {hoverLogo ? 'Empieza Ahora' : 'arthur'}
+          </span>
+        </button>
 
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '28px',
-          left: 0,
-          right: 0,
-          textAlign: 'center',
-          zIndex: 2,
-          fontFamily: 'DM Mono, monospace',
-          fontSize: '10px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.15em',
-          color: 'rgba(255,255,255,0.25)',
-        }}
-      >
-        Arthur &mdash; 2026
+        <div
+          style={{
+            width: 'min(200px, 45vw)',
+            height: '1px',
+            marginTop: '28px',
+            background: 'linear-gradient(90deg, transparent, rgba(194, 164, 109, 0.55), transparent)',
+          }}
+        />
+
+        <p
+          style={{
+            marginTop: '24px',
+            fontFamily: 'var(--font-body), Inter, system-ui, sans-serif',
+            fontSize: '11px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.22em',
+            color: '#c2a46d',
+          }}
+        >
+          Arthur — 2026
+        </p>
       </div>
     </div>
   );

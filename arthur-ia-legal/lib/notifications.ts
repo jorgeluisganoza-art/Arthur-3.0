@@ -197,3 +197,140 @@ export async function sendEmail(
     return false;
   }
 }
+
+export async function sendJudicialWhatsApp(
+  to: string,
+  alias: string,
+  acto: string,
+  urgencia: string,
+  sugerencia: string,
+  casoId: number
+): Promise<boolean> {
+  try {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const from = process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886';
+
+    if (!accountSid || !authToken) {
+      console.warn('[Notifications] Twilio credentials not configured');
+      return false;
+    }
+
+    const client = twilio(accountSid, authToken);
+    const emoji = urgencia === 'alta' ? '🔴' : '🟡';
+    const urgenciaMsg = urgencia === 'alta'
+      ? 'Atención inmediata: este movimiento requiere acción prioritaria.'
+      : 'Movimiento detectado para revisión.'
+
+    const body = `${emoji} *ARTHUR-IA JUDICIAL*
+
+*Proceso:* ${alias}
+*Movimiento:* ${acto}
+
+${urgenciaMsg}
+
+💡 *Qué hacer:* ${sugerencia}
+
+_Ver detalle → arthuria.legal/judicial/${casoId}_`;
+
+    const toNumber = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
+    await client.messages.create({ from, to: toNumber, body });
+    return true;
+  } catch (error) {
+    console.error('[Notifications] Judicial WhatsApp error:', error);
+    return false;
+  }
+}
+
+export async function sendJudicialEmail(
+  to: string,
+  alias: string,
+  acto: string,
+  sumilla: string,
+  urgencia: string,
+  sugerencia: string,
+  casoId: number
+): Promise<boolean> {
+  try {
+    const host = process.env.EMAIL_HOST;
+    const port = parseInt(process.env.EMAIL_PORT || '587');
+    const user = process.env.EMAIL_USER;
+    const pass = process.env.EMAIL_PASS;
+
+    if (!host || !user || !pass) {
+      console.warn('[Notifications] Email credentials not configured');
+      return false;
+    }
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    });
+
+    const isAlta = urgencia === 'alta';
+    const color = isAlta ? '#991b1b' : '#b8860b';
+    const bg = isAlta ? 'rgba(153,27,27,0.08)' : 'rgba(184,134,11,0.08)';
+    const emoji = isAlta ? '🔴' : '🟡';
+
+    const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arthur-IA Judicial — ${alias}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f0e8;font-family:'Inter',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f0e8;padding:40px 20px;">
+    <tr><td>
+      <table width="600" cellpadding="0" cellspacing="0" style="margin:0 auto;background:white;border:1px solid rgba(15,15,15,0.08);">
+        <tr>
+          <td style="background:#1a3a5c;padding:28px 32px;">
+            <div style="font-family:Georgia,serif;font-size:24px;color:white;font-style:italic;">Arthur-IA</div>
+            <div style="font-family:'Courier New',monospace;font-size:10px;color:rgba(245,240,232,0.5);text-transform:uppercase;letter-spacing:0.15em;margin-top:4px;">Poder Judicial · CEJ</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px 0;">
+            <div style="font-family:'Courier New',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:#6b6560;margin-bottom:8px;">ACTUALIZACIÓN JUDICIAL</div>
+            <div style="font-size:20px;font-weight:600;color:#0f0f0f;margin-bottom:12px;">${alias}</div>
+            <span style="display:inline-block;padding:6px 12px;background:${bg};color:${color};border:1px solid ${color};font-family:'Courier New',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;">${emoji} ${urgencia.toUpperCase()}</span>
+          </td>
+        </tr>
+        <tr><td style="padding:20px 32px 0;"><p style="margin:0;color:#0f0f0f;font-size:15px;line-height:1.7;"><strong>Movimiento:</strong> ${acto}</p></td></tr>
+        <tr><td style="padding:12px 32px 0;"><p style="margin:0;color:#444;font-size:14px;line-height:1.7;">${sumilla || 'Sin sumilla disponible.'}</p></td></tr>
+        <tr>
+          <td style="padding:20px 32px 0;">
+            <div style="border-left:4px solid #1e8449;background:rgba(39,174,96,0.06);padding:16px 20px;">
+              <div style="font-family:'Courier New',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#1e8449;margin-bottom:6px;">💡 QUÉ HACER AHORA</div>
+              <p style="margin:0;color:#0f0f0f;font-size:14px;line-height:1.7;">${sugerencia}</p>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px;text-align:center;">
+            <a href="http://localhost:3000/judicial/${casoId}" style="display:inline-block;background:#0f0f0f;color:#f5f0e8;font-family:'Courier New',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;padding:14px 28px;text-decoration:none;">Ver detalle completo →</a>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    await transporter.sendMail({
+      from: `"Arthur-IA Judicial" <${user}>`,
+      to,
+      subject: `${emoji} ${alias} — ${acto} | Arthur-IA Judicial`,
+      html,
+      text: `Proceso: ${alias}\nMovimiento: ${acto}\nUrgencia: ${urgencia}\n\n${sumilla}\n\nQué hacer: ${sugerencia}`
+    });
+
+    return true;
+  } catch (error) {
+    console.error('[Notifications] Judicial Email error:', error);
+    return false;
+  }
+}

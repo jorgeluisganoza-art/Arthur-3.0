@@ -46,7 +46,7 @@ export default function AnimatedBackground() {
       const targetIntensity = mouseRef.current.intensity;
       currentIntensity += (targetIntensity - currentIntensity) * 0.04;
 
-      ctx.fillStyle = '#000000';
+      ctx.fillStyle = '#0b0b0b';
       ctx.fillRect(0, 0, w, h);
 
       const cx = w * 0.5;
@@ -54,11 +54,11 @@ export default function AnimatedBackground() {
 
       const baseGlow = 0.25 + currentIntensity * 0.75;
 
-      // Horizon line glow
+      // Horizon — subtle champagne gold
       const lineGrad = ctx.createLinearGradient(0, horizonY - 2, 0, horizonY + 2);
-      lineGrad.addColorStop(0, `rgba(40, 200, 120, ${0.05 * baseGlow})`);
-      lineGrad.addColorStop(0.5, `rgba(60, 255, 150, ${0.15 * baseGlow})`);
-      lineGrad.addColorStop(1, `rgba(40, 200, 120, ${0.05 * baseGlow})`);
+      lineGrad.addColorStop(0, `rgba(194, 164, 109, ${0.06 * baseGlow})`);
+      lineGrad.addColorStop(0.5, `rgba(194, 164, 109, ${0.18 * baseGlow})`);
+      lineGrad.addColorStop(1, `rgba(194, 164, 109, ${0.06 * baseGlow})`);
       ctx.fillStyle = lineGrad;
       const lineSpread = w * (0.4 + currentIntensity * 0.35);
       ctx.fillRect(cx - lineSpread, horizonY - 1, lineSpread * 2, 2);
@@ -66,10 +66,10 @@ export default function AnimatedBackground() {
       // Main light source — large radial glow
       const mainRadius = Math.min(w, h) * (0.35 + currentIntensity * 0.3);
       const mainGrad = ctx.createRadialGradient(cx, horizonY, 0, cx, horizonY, mainRadius);
-      mainGrad.addColorStop(0, `rgba(180, 255, 210, ${0.9 * baseGlow})`);
-      mainGrad.addColorStop(0.08, `rgba(100, 240, 160, ${0.6 * baseGlow})`);
-      mainGrad.addColorStop(0.25, `rgba(50, 180, 100, ${0.3 * baseGlow})`);
-      mainGrad.addColorStop(0.5, `rgba(20, 100, 60, ${0.12 * baseGlow})`);
+      mainGrad.addColorStop(0, `rgba(220, 200, 160, ${0.35 * baseGlow})`);
+      mainGrad.addColorStop(0.08, `rgba(194, 164, 109, ${0.22 * baseGlow})`);
+      mainGrad.addColorStop(0.25, `rgba(31, 58, 95, ${0.18 * baseGlow})`);
+      mainGrad.addColorStop(0.5, `rgba(31, 58, 95, ${0.08 * baseGlow})`);
       mainGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = mainGrad;
       ctx.fillRect(0, 0, w, h);
@@ -96,8 +96,8 @@ export default function AnimatedBackground() {
         const endY = horizonY + Math.sin(rayAngle) * rayLength;
 
         const rayGrad = ctx.createLinearGradient(cx, horizonY, endX, endY);
-        rayGrad.addColorStop(0, `rgba(120, 255, 180, ${opacity})`);
-        rayGrad.addColorStop(0.4, `rgba(60, 200, 120, ${opacity * 0.5})`);
+        rayGrad.addColorStop(0, `rgba(194, 164, 109, ${opacity})`);
+        rayGrad.addColorStop(0.4, `rgba(100, 130, 170, ${opacity * 0.45})`);
         rayGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
         ctx.beginPath();
@@ -113,8 +113,8 @@ export default function AnimatedBackground() {
       // Secondary wide atmospheric glow (covers upper area)
       const atmoRadius = w * (0.5 + currentIntensity * 0.3);
       const atmoGrad = ctx.createRadialGradient(cx, horizonY, 0, cx, horizonY, atmoRadius);
-      atmoGrad.addColorStop(0, `rgba(80, 220, 140, ${0.08 * baseGlow})`);
-      atmoGrad.addColorStop(0.3, `rgba(30, 120, 70, ${0.04 * baseGlow})`);
+      atmoGrad.addColorStop(0, `rgba(194, 164, 109, ${0.06 * baseGlow})`);
+      atmoGrad.addColorStop(0.3, `rgba(31, 58, 95, ${0.05 * baseGlow})`);
       atmoGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = atmoGrad;
       ctx.fillRect(0, 0, w, h);
@@ -122,8 +122,8 @@ export default function AnimatedBackground() {
       // Subtle pulsing inner core
       const pulseSize = 20 + Math.sin(time * 1.5) * 5 + currentIntensity * 30;
       const pulseGrad = ctx.createRadialGradient(cx, horizonY, 0, cx, horizonY, pulseSize);
-      pulseGrad.addColorStop(0, `rgba(220, 255, 235, ${0.8 * baseGlow})`);
-      pulseGrad.addColorStop(0.5, `rgba(150, 255, 200, ${0.3 * baseGlow})`);
+      pulseGrad.addColorStop(0, `rgba(245, 240, 230, ${0.45 * baseGlow})`);
+      pulseGrad.addColorStop(0.5, `rgba(194, 164, 109, ${0.2 * baseGlow})`);
       pulseGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = pulseGrad;
       ctx.fillRect(cx - pulseSize, horizonY - pulseSize, pulseSize * 2, pulseSize * 2);
@@ -132,7 +132,7 @@ export default function AnimatedBackground() {
       ctx.save();
       ctx.beginPath();
       ctx.ellipse(cx, horizonY + h * 0.28, w * 0.7, h * 0.28, 0, 0, Math.PI * 2);
-      ctx.fillStyle = '#000000';
+      ctx.fillStyle = '#0b0b0b';
       ctx.fill();
       ctx.restore();
 
@@ -159,7 +159,7 @@ export default function AnimatedBackground() {
         height: '100vh',
         zIndex: 0,
         display: 'block',
-        background: '#000000',
+        background: '#0b0b0b',
       }}
     />
   );

@@ -42,10 +42,10 @@ export default function AlertasPage() {
         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--muted)', marginBottom: '8px' }}>
           HISTORIAL
         </div>
-        <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400 }}>
           Alertas
         </h1>
-        <div style={{ width: '60px', height: '2px', background: '#1a3d2b', marginTop: '16px' }} />
+        <div style={{ width: '60px', height: '2px', background: 'var(--accent)', marginTop: '16px' }} />
       </div>
 
       <div style={{ marginTop: '40px' }}>
@@ -55,7 +55,7 @@ export default function AlertasPage() {
           </div>
         ) : notifications.length === 0 ? (
           <div style={{ textAlign: 'center', marginTop: '60px' }}>
-            <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: 'var(--ink)', marginBottom: '8px' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '24px', color: 'var(--ink)', marginBottom: '8px' }}>
               No hay alertas enviadas
             </div>
             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'var(--muted)' }}>
@@ -63,13 +63,13 @@ export default function AlertasPage() {
             </div>
           </div>
         ) : (
-          <div style={{ background: 'white', border: '1px solid rgba(15,15,15,0.08)' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
             {notifications.map((n, idx) => (
               <div
                 key={n.id}
                 style={{
                   padding: '20px 24px',
-                  borderBottom: idx < notifications.length - 1 ? '1px solid rgba(15,15,15,0.06)' : 'none',
+                  borderBottom: idx < notifications.length - 1 ? '1px solid var(--line-faint)' : 'none',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',

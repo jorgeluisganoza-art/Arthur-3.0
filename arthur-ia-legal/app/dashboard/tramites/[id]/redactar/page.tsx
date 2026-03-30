@@ -163,11 +163,11 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', height: '100vh', overflow: 'hidden' }}>
       {/* ── Chat Panel ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(15,15,15,0.08)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--line)', overflow: 'hidden' }}>
         {/* Chat Header */}
         <div style={{
-          background: 'white',
-          borderBottom: '1px solid rgba(15,15,15,0.08)',
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--line)',
           padding: '20px 28px',
           flexShrink: 0,
         }}>
@@ -181,7 +181,7 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
                   ← Volver
                 </Link>
               </div>
-              <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '20px', color: 'var(--ink)' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', color: 'var(--ink)' }}>
                 Redactor IA
               </div>
               <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -191,7 +191,7 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
             <span style={{
               fontFamily: 'DM Mono, monospace',
               fontSize: '10px',
-              background: '#1a3d2b',
+              background: 'var(--accent-navy)',
               color: 'white',
               padding: '4px 10px',
               borderRadius: '2px',
@@ -210,9 +210,9 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
                   key={dt.value}
                   onClick={() => setDocumentType(dt.value)}
                   style={{
-                    background: documentType === dt.value ? 'var(--ink)' : 'white',
+                    background: documentType === dt.value ? 'var(--ink)' : 'var(--surface)',
                     color: documentType === dt.value ? 'var(--paper)' : 'var(--ink)',
-                    border: '1px solid rgba(15,15,15,0.15)',
+                    border: '1px solid var(--line-strong)',
                     borderRadius: '2px',
                     padding: '6px 14px',
                     fontFamily: 'DM Mono, monospace',
@@ -244,7 +244,7 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
                   background: 'var(--paper)',
                   borderLeft: '3px solid var(--accent)',
                   padding: '16px 20px',
-                  border: '1px solid rgba(15,15,15,0.08)',
+                  border: '1px solid var(--line)',
                   borderLeftColor: 'var(--accent)',
                 }}>
                   <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
@@ -256,7 +256,7 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
                 </div>
               ) : (
                 <div style={{
-                  background: '#1a3d2b',
+                  background: 'var(--accent-navy)',
                   color: 'var(--paper)',
                   padding: '14px 18px',
                   borderRadius: '2px',
@@ -276,7 +276,7 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
               background: 'var(--paper)',
               borderLeft: '3px solid var(--accent)',
               padding: '16px 20px',
-              border: '1px solid rgba(15,15,15,0.08)',
+              border: '1px solid var(--line)',
               borderLeftColor: 'var(--accent)',
               maxWidth: '85%',
             }}>
@@ -292,8 +292,8 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
 
         {/* Input Area */}
         <div style={{
-          background: 'white',
-          borderTop: '1px solid rgba(15,15,15,0.08)',
+          background: 'var(--surface)',
+          borderTop: '1px solid var(--line)',
           padding: '16px 24px',
           display: 'flex',
           gap: '12px',
@@ -307,8 +307,8 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
             placeholder="Escribe tu respuesta..."
             style={{
               flex: 1,
-              background: 'white',
-              border: '1px solid rgba(15,15,15,0.15)',
+              background: 'var(--surface)',
+              border: '1px solid var(--line-strong)',
               borderRadius: 0,
               padding: '12px 16px',
               fontFamily: 'Inter, sans-serif',
@@ -320,13 +320,13 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
               outline: 'none',
             }}
             onFocus={e => { e.currentTarget.style.borderColor = 'var(--ink)'; }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(15,15,15,0.15)'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-strong)'; }}
           />
           <button
             onClick={handleSend}
             disabled={!inputText.trim() || isTyping}
             style={{
-              background: inputText.trim() && !isTyping ? 'var(--ink)' : 'rgba(15,15,15,0.3)',
+              background: inputText.trim() && !isTyping ? 'var(--ink)' : 'rgba(255,255,255,0.1)',
               color: 'var(--paper)',
               border: 'none',
               borderRadius: 0,
@@ -348,15 +348,15 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
       <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--paper)' }}>
         {/* Doc Header */}
         <div style={{
-          background: 'white',
-          borderBottom: '1px solid rgba(15,15,15,0.08)',
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--line)',
           padding: '20px 28px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexShrink: 0,
         }}>
-          <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '20px', color: 'var(--ink)' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', color: 'var(--ink)' }}>
             Escrito {DOC_TYPES.find(d => d.value === documentType)?.label}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -370,7 +370,7 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
               disabled={!documentContent}
               style={{
                 background: 'transparent',
-                border: '1px solid rgba(15,15,15,0.15)',
+                border: '1px solid var(--line-strong)',
                 borderRadius: 0,
                 padding: '8px 16px',
                 fontFamily: 'DM Mono, monospace',
@@ -407,14 +407,14 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
                 color: 'var(--muted)',
                 marginTop: '32px',
                 paddingTop: '16px',
-                borderTop: '1px solid rgba(15,15,15,0.1)',
+                borderTop: '1px solid var(--line-mid)',
               }}>
                 Aviso: Borrador generado por Arthur-IA Legal. Revisar con abogado antes de presentar.
               </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', opacity: 0.5 }}>
-              <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: 'var(--ink)' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '24px', color: 'var(--ink)' }}>
                 El escrito aparecerá aquí
               </div>
               <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'var(--muted)', textAlign: 'center', maxWidth: '300px' }}>

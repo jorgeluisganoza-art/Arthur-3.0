@@ -111,15 +111,15 @@ export default function AgendaPage() {
         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--muted)', marginBottom: '8px' }}>
           AGENDA DE PLAZOS
         </div>
-        <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400 }}>
           Agenda
         </h1>
-        <div style={{ width: '60px', height: '2px', background: '#1a3d2b', marginTop: '16px' }} />
+        <div style={{ width: '60px', height: '2px', background: 'var(--accent)', marginTop: '16px' }} />
       </div>
 
       {plazos.length === 0 ? (
         <div style={{ textAlign: 'center', marginTop: '80px' }}>
-          <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: 'var(--ink)', marginBottom: '8px' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '24px', color: 'var(--ink)', marginBottom: '8px' }}>
             No hay plazos próximos. Todo al día. ✓
           </div>
           <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'var(--muted)' }}>
@@ -152,8 +152,8 @@ export default function AgendaPage() {
                         key={plazo.id}
                         href={`/dashboard/tramites/${plazo.tramite_id}`}
                         style={{
-                          background: 'white',
-                          border: '1px solid rgba(15,15,15,0.08)',
+                          background: 'var(--surface)',
+                          border: '1px solid var(--line)',
                           padding: '20px 24px',
                           display: 'flex',
                           gap: '24px',
@@ -162,11 +162,11 @@ export default function AgendaPage() {
                           transition: 'border-color 0.15s',
                         }}
                         onMouseOver={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(15,15,15,0.2)'; }}
-                        onMouseOut={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(15,15,15,0.08)'; }}
+                        onMouseOut={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--line)'; }}
                       >
                         {/* Days counter */}
                         <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '80px' }}>
-                          <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '40px', color: getDaysColor(days), lineHeight: 1 }}>
+                          <div style={{ fontFamily: 'var(--font-display)', fontSize: '40px', color: getDaysColor(days), lineHeight: 1 }}>
                             {days}
                           </div>
                           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase' }}>

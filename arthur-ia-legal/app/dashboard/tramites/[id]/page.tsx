@@ -244,7 +244,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
 
   const headerActionBtn: CSSProperties = {
     background: 'transparent',
-    border: '1px solid rgba(15,15,15,0.15)',
+    border: '1px solid var(--line-strong)',
     borderRadius: 0,
     padding: '10px 20px',
     fontFamily: 'DM Mono, monospace',
@@ -267,7 +267,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
   if (!tramite) {
     return (
       <div style={{ padding: '48px 64px' }}>
-        <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: 'var(--ink)' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: '24px', color: 'var(--ink)' }}>
           Trámite no encontrado
         </div>
         {fetchError && (
@@ -341,7 +341,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
         <div style={{
           marginBottom: '20px',
           padding: '14px 18px',
-          border: '1px solid rgba(15,15,15,0.1)',
+          border: '1px solid var(--line-mid)',
           background: 'rgba(15,15,15,0.02)',
         }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: '10px' }}>
@@ -396,7 +396,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 'clamp(32px, 4vw, 52px)', color: 'var(--ink)', fontWeight: 400 }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 52px)', color: 'var(--ink)', fontWeight: 400 }}>
             {tramite.alias}
           </h1>
           <StatusBadge estado={tramite.estado_actual} />
@@ -452,8 +452,8 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
                     right: 0,
                     top: '100%',
                     marginTop: '4px',
-                    background: 'white',
-                    border: '1px solid rgba(15,15,15,0.1)',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--line-mid)',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                     zIndex: 460,
                     minWidth: '168px',
@@ -490,7 +490,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
                       padding: '10px 16px',
                       background: 'none',
                       border: 'none',
-                      borderTop: '1px solid rgba(15,15,15,0.06)',
+                      borderTop: '1px solid var(--line-faint)',
                       fontFamily: 'DM Mono, monospace',
                       fontSize: '10px',
                       textTransform: 'uppercase',
@@ -510,12 +510,12 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
-      <div style={{ width: '60px', height: '2px', background: '#1a3d2b', marginTop: '16px', marginBottom: '32px' }} />
+      <div style={{ width: '60px', height: '2px', background: 'var(--accent)', marginTop: '16px', marginBottom: '32px' }} />
 
       {/* Current Status Card */}
       <div style={{
-        background: 'white',
-        border: '1px solid rgba(15,15,15,0.08)',
+        background: 'var(--surface)',
+        border: '1px solid var(--line)',
         borderLeft: `4px solid ${statusColor}`,
         padding: '28px 32px',
         marginBottom: '24px',
@@ -524,7 +524,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--muted)', marginBottom: '8px' }}>
           ESTADO ACTUAL
         </div>
-        <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '32px', color: statusColor, marginBottom: '20px' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: '32px', color: statusColor, marginBottom: '20px' }}>
           {tramite.estado_actual}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
@@ -543,7 +543,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
             </div>
           ))}
         </div>
-        <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(15,15,15,0.08)' }}>
+        <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--line)' }}>
           <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--muted)', marginBottom: '8px' }}>
             Tipo de registro (como en Síguelo Plus)
           </div>
@@ -555,9 +555,9 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
               fontFamily: 'Inter, sans-serif',
               fontSize: '13px',
               padding: '10px 12px',
-              border: '1px solid rgba(15,15,15,0.15)',
+              border: '1px solid var(--line-strong)',
               minWidth: '280px',
-              background: 'white',
+              background: 'var(--surface)',
               cursor: isDeleted ? 'not-allowed' : 'pointer',
               opacity: isDeleted ? 0.65 : 1,
             }}
@@ -598,7 +598,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
       {/* AI Suggestion */}
       {needsAction && (
         <div style={{
-          background: '#1a3d2b',
+          background: 'var(--accent-navy)',
           padding: '32px',
           marginBottom: '24px',
           animation: 'fadeUp 0.4s ease forwards',
@@ -607,7 +607,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: '22px', color: 'white' }}>Qué hacer ahora</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '22px', color: 'white' }}>Qué hacer ahora</span>
             </div>
             <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.7)', padding: '4px 10px', borderRadius: '2px' }}>
               Claude AI
@@ -709,7 +709,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
       {tramite.plazos.length > 0 && (
         <div style={{ marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '16px' }}>
-            <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: 'var(--ink)', fontWeight: 400 }}>Plazos</h2>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', color: 'var(--ink)', fontWeight: 400 }}>Plazos</h2>
             <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--muted)' }}>FECHAS IMPORTANTES</span>
           </div>
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
@@ -719,8 +719,8 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
                 <div
                   key={plazo.id}
                   style={{
-                    background: 'white',
-                    border: '1px solid rgba(15,15,15,0.08)',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--line)',
                     padding: '20px 24px',
                     display: 'flex',
                     gap: '20px',
@@ -729,7 +729,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
                   }}
                 >
                   <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                    <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '48px', color: getDaysColor(days), lineHeight: 1 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '48px', color: getDaysColor(days), lineHeight: 1 }}>
                       {days}
                     </div>
                     <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>
@@ -759,11 +759,11 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
       {/* Historial */}
       {tramite.historial.length > 0 && (
         <div style={{ marginBottom: '40px' }}>
-          <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: 'var(--ink)', fontWeight: 400, marginBottom: '20px' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', color: 'var(--ink)', fontWeight: 400, marginBottom: '20px' }}>
             Historial
           </h2>
           <div style={{ position: 'relative', paddingLeft: '24px' }}>
-            <div style={{ position: 'absolute', left: '3px', top: 0, bottom: 0, width: '1px', background: 'rgba(15,15,15,0.1)' }} />
+            <div style={{ position: 'absolute', left: '3px', top: 0, bottom: 0, width: '1px', background: 'var(--line-mid)' }} />
             {tramite.historial.map(item => (
               <div key={item.id} style={{ position: 'relative', paddingBottom: '24px', paddingLeft: '16px' }}>
                 <div style={{
@@ -816,7 +816,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
           border: 'none',
           borderRadius: 0,
           padding: '20px',
-          fontFamily: 'DM Serif Display, serif',
+          fontFamily: 'var(--font-display)',
           fontStyle: 'italic',
           fontSize: '20px',
           cursor: demoStep || caseActionBusy || isDeleted ? 'not-allowed' : 'pointer',

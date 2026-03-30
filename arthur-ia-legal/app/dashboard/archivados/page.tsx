@@ -81,7 +81,7 @@ export default function ArchivadosPage() {
         <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--muted)', marginBottom: '8px' }}>
           ARCHIVADOS
         </div>
-        <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400, lineHeight: 1.1 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 4vw, 48px)', color: 'var(--ink)', fontWeight: 400, lineHeight: 1.1 }}>
           Trámites Archivados
         </h1>
         <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: 'var(--muted)', marginTop: '8px' }}>
@@ -89,7 +89,7 @@ export default function ArchivadosPage() {
         </p>
       </div>
 
-      <div style={{ marginTop: '32px', background: 'white', border: '1px solid rgba(15,15,15,0.08)' }}>
+      <div style={{ marginTop: '32px', background: 'var(--surface)', border: '1px solid var(--line)' }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: '140px 100px 1fr 130px 130px 200px',
@@ -112,7 +112,7 @@ export default function ArchivadosPage() {
 
         {tramites.length === 0 ? (
           <div style={{ padding: '64px 24px', textAlign: 'center' }}>
-            <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: 'var(--ink)', marginBottom: '12px' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '24px', color: 'var(--ink)', marginBottom: '12px' }}>
               No hay trámites archivados
             </div>
             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', color: 'var(--muted)' }}>
@@ -129,7 +129,7 @@ export default function ArchivadosPage() {
                 padding: '0 24px',
                 height: '64px',
                 alignItems: 'center',
-                borderBottom: '1px solid rgba(15,15,15,0.06)',
+                borderBottom: '1px solid var(--line-faint)',
                 gap: '16px',
               }}
             >
@@ -156,7 +156,7 @@ export default function ArchivadosPage() {
                   onClick={() => handleAction(t.id, 'restore')}
                   style={{
                     background: 'transparent',
-                    border: '1px solid rgba(15,15,15,0.15)',
+                    border: '1px solid var(--line-strong)',
                     borderRadius: 0,
                     padding: '6px 12px',
                     fontFamily: 'DM Mono, monospace',
