@@ -1,5 +1,6 @@
 import twilio from 'twilio';
 import nodemailer from 'nodemailer';
+import { getAppBaseUrl } from '@/lib/app-url';
 
 function getStatusEmoji(estado: string): string {
   if (estado === 'OBSERVADO' || estado === 'TACHA') return '🔴';
@@ -38,7 +39,7 @@ ${message}
 
 💡 *Qué hacer:* ${suggestion}
 
-_arthuria.legal/tramites/${tramiteId}_`;
+${getAppBaseUrl()}/dashboard/tramites/${tramiteId}`;
 
     const toNumber = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
 
@@ -108,6 +109,7 @@ export async function sendEmail(
     const statusColor = getStatusColor(estado);
     const statusBg = getStatusBgColor(estado);
     const emoji = getStatusEmoji(estado);
+    const base = getAppBaseUrl();
 
     const html = `
 <!DOCTYPE html>
@@ -166,7 +168,7 @@ export async function sendEmail(
           <!-- CTA -->
           <tr>
             <td style="padding:32px;text-align:center;">
-              <a href="http://localhost:3000/dashboard/tramites/${tramiteId}" style="display:inline-block;background:#0f0f0f;color:#f5f0e8;font-family:'Courier New',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;padding:14px 28px;text-decoration:none;border-radius:0;">Ver detalle completo →</a>
+              <a href="${base}/dashboard/tramites/${tramiteId}" style="display:inline-block;background:#0f0f0f;color:#f5f0e8;font-family:'Courier New',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;padding:14px 28px;text-decoration:none;border-radius:0;">Ver detalle completo →</a>
             </td>
           </tr>
           <!-- Footer -->
@@ -231,7 +233,7 @@ ${urgenciaMsg}
 
 💡 *Qué hacer:* ${sugerencia}
 
-_Ver detalle → arthuria.legal/judicial/${casoId}_`;
+${getAppBaseUrl()}/judicial/${casoId}`;
 
     const toNumber = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
     await client.messages.create({ from, to: toNumber, body });
@@ -273,6 +275,7 @@ export async function sendJudicialEmail(
     const color = isAlta ? '#991b1b' : '#b8860b';
     const bg = isAlta ? 'rgba(153,27,27,0.08)' : 'rgba(184,134,11,0.08)';
     const emoji = isAlta ? '🔴' : '🟡';
+    const base = getAppBaseUrl();
 
     const html = `
 <!DOCTYPE html>
@@ -311,7 +314,7 @@ export async function sendJudicialEmail(
         </tr>
         <tr>
           <td style="padding:28px 32px;text-align:center;">
-            <a href="http://localhost:3000/judicial/${casoId}" style="display:inline-block;background:#0f0f0f;color:#f5f0e8;font-family:'Courier New',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;padding:14px 28px;text-decoration:none;">Ver detalle completo →</a>
+            <a href="${base}/judicial/${casoId}" style="display:inline-block;background:#0f0f0f;color:#f5f0e8;font-family:'Courier New',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;padding:14px 28px;text-decoration:none;">Ver detalle completo →</a>
           </td>
         </tr>
       </table>
