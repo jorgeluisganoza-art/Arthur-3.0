@@ -503,6 +503,302 @@ export async function getOficinas(): Promise<SunarpOficina[]> {
   return oficinasCache
 }
 
+// ── Static OFICINAS fallback ───────────────────────────────────────────────────
+// Full list fetched dynamically via getOficinas(); this is a minimal fallback.
+export const OFICINAS_ESTATICAS: SunarpOficina[] = [
+  { codigoZona: '01', codigoOficina: '01', nombreOficina: 'Lima - Sede Central' },
+  { codigoZona: '01', codigoOficina: '02', nombreOficina: 'Lima Norte' },
+  { codigoZona: '01', codigoOficina: '03', nombreOficina: 'Lima Sur' },
+  { codigoZona: '01', codigoOficina: '04', nombreOficina: 'Lima Este' },
+  { codigoZona: '01', codigoOficina: '05', nombreOficina: 'Lima - Callao' },
+  { codigoZona: '02', codigoOficina: '01', nombreOficina: 'La Libertad - Trujillo' },
+  { codigoZona: '02', codigoOficina: '02', nombreOficina: 'La Libertad - Chepén' },
+  { codigoZona: '03', codigoOficina: '01', nombreOficina: 'Piura - Piura' },
+  { codigoZona: '03', codigoOficina: '02', nombreOficina: 'Piura - Sullana' },
+  { codigoZona: '03', codigoOficina: '03', nombreOficina: 'Piura - Talara' },
+  { codigoZona: '04', codigoOficina: '01', nombreOficina: 'Loreto - Iquitos' },
+  { codigoZona: '05', codigoOficina: '01', nombreOficina: 'Lambayeque - Chiclayo' },
+  { codigoZona: '05', codigoOficina: '02', nombreOficina: 'Lambayeque - Ferreñafe' },
+  { codigoZona: '06', codigoOficina: '01', nombreOficina: 'Pucallpa' },
+  { codigoZona: '07', codigoOficina: '01', nombreOficina: 'Huaraz' },
+  { codigoZona: '08', codigoOficina: '01', nombreOficina: 'Huancayo' },
+  { codigoZona: '09', codigoOficina: '01', nombreOficina: 'Ica - Ica' },
+  { codigoZona: '09', codigoOficina: '02', nombreOficina: 'Ica - Chincha' },
+  { codigoZona: '10', codigoOficina: '01', nombreOficina: 'Cusco - Cusco' },
+  { codigoZona: '10', codigoOficina: '02', nombreOficina: 'Cusco - Sicuani' },
+  { codigoZona: '11', codigoOficina: '01', nombreOficina: 'Arequipa - Arequipa' },
+  { codigoZona: '11', codigoOficina: '02', nombreOficina: 'Arequipa - Camaná' },
+  { codigoZona: '12', codigoOficina: '01', nombreOficina: 'Tacna' },
+  { codigoZona: '13', codigoOficina: '01', nombreOficina: 'Puno - Puno' },
+  { codigoZona: '13', codigoOficina: '02', nombreOficina: 'Puno - Juliaca' },
+  { codigoZona: '14', codigoOficina: '01', nombreOficina: 'Amazonas - Moyobamba' },
+  { codigoZona: '14', codigoOficina: '02', nombreOficina: 'San Martín - Tarapoto' },
+  { codigoZona: '15', codigoOficina: '01', nombreOficina: 'Áncash - Huaraz' },
+  { codigoZona: '15', codigoOficina: '02', nombreOficina: 'Áncash - Chimbote' },
+  { codigoZona: '16', codigoOficina: '01', nombreOficina: 'Ayacucho' },
+  { codigoZona: '17', codigoOficina: '01', nombreOficina: 'Cajamarca' },
+  { codigoZona: '18', codigoOficina: '01', nombreOficina: 'Junín - Huancayo' },
+  { codigoZona: '19', codigoOficina: '01', nombreOficina: 'Moquegua' },
+  { codigoZona: '20', codigoOficina: '01', nombreOficina: 'Tumbes' },
+  { codigoZona: '21', codigoOficina: '01', nombreOficina: 'Madre de Dios - Puerto Maldonado' },
+]
+
+// ── 2captcha Turnstile solver ─────────────────────────────────────────────────
+
+async function getPublicIp(): Promise<string> {
+  try {
+    const res = await axios.get('https://api.ipify.org?format=json', { timeout: 5000 })
+    return (res.data as { ip: string }).ip || '0.0.0.0'
+  } catch {
+    return '0.0.0.0'
+  }
+}
+
+export async function solveTurnstileWith2Captcha(): Promise<string | null> {
+  const apiKey = process.env.TWOCAPTCHA_API_KEY
+  if (!apiKey) return null
+
+  try {
+    console.log('[2captcha] Submitting Turnstile...')
+    const submitRes = await axios.post(
+      'https://2captcha.com/in.php',
+      {
+        key: apiKey,
+        method: 'turnstile',
+        sitekey: '0x4AAAAAABjHwQpFgHGVKCei',
+        pageurl: 'https://sigueloplus.sunarp.gob.pe/siguelo/',
+        json: 1,
+      },
+      { timeout: 15000 },
+    )
+
+    if (submitRes.data.status !== 1) {
+      console.error('[2captcha] Submit failed:', submitRes.data)
+      return null
+    }
+
+    const captchaId = String(submitRes.data.request)
+    console.log(`[2captcha] Task created: ${captchaId}`)
+
+    for (let i = 0; i < 24; i++) {
+      await new Promise(r => setTimeout(r, 5000))
+      const pollRes = await axios.get('https://2captcha.com/res.php', {
+        params: { key: apiKey, action: 'get', id: captchaId, json: 1 },
+        timeout: 10000,
+      })
+
+      if (pollRes.data.status === 1) {
+        console.log('[2captcha] Turnstile solved successfully')
+        return String(pollRes.data.request)
+      }
+
+      if (pollRes.data.request !== 'CAPCHA_NOT_READY') {
+        console.error('[2captcha] Solve error:', pollRes.data.request)
+        return null
+      }
+    }
+
+    console.error('[2captcha] Timeout waiting for Turnstile solution')
+    return null
+  } catch (err) {
+    console.error('[2captcha] Exception:', err)
+    return null
+  }
+}
+
+// ── Higher-level consultation wrapper (for Síguelo module) ───────────────────
+
+export interface TituloConsultaResult {
+  estado: string
+  detalle: string
+  areaRegistral: string
+  numeroPartida: string
+  portalDown: boolean
+  scrapedAt: string
+}
+
+/**
+ * High-level SUNARP title consultation. Tries detalleTitulo (no CAPTCHA)
+ * and falls back to consultaTitulo with a 2captcha-resolved Turnstile token
+ * if TWOCAPTCHA_API_KEY is configured.
+ */
+export async function consultarTituloSUNARP(
+  oficina: string,
+  anio: string,
+  numero: string,
+): Promise<TituloConsultaResult> {
+  let token: string | null = null
+  if (process.env.TWOCAPTCHA_API_KEY) {
+    token = await solveTurnstileWith2Captcha()
+  }
+
+  const result = await scrapeTitulo(numero, anio, oficina, 'predio', token)
+
+  if (result.portalDown) {
+    return { estado: 'SIN DATOS', detalle: '', areaRegistral: '', numeroPartida: '', portalDown: true, scrapedAt: result.scrapedAt }
+  }
+
+  let areaRegistral = ''
+  let numeroPartida = ''
+  try {
+    if (result.rawResponse) {
+      const raw = JSON.parse(result.rawResponse) as {
+        lstDetalleTitulo?: Array<{ areaRegistral?: string; numeroPartida?: string; numeroAsiento?: string; [key: string]: unknown }>
+        lstTitulo?: Array<{ areaRegistral?: string; numeroPartida?: string; [key: string]: unknown }>
+      }
+      const items = raw.lstDetalleTitulo || raw.lstTitulo || []
+      const last = items[items.length - 1]
+      if (last) {
+        areaRegistral = String(last.areaRegistral || '')
+        numeroPartida = String(last.numeroPartida || last.numeroAsiento || '')
+      }
+    }
+  } catch { /* ignore */ }
+
+  return {
+    estado: result.estado,
+    detalle: result.observacion,
+    areaRegistral,
+    numeroPartida,
+    portalDown: false,
+    scrapedAt: result.scrapedAt,
+  }
+}
+
+// ── Esquelas (observation letters) ───────────────────────────────────────────
+
+export interface EsquelaParams {
+  numeroTitulo: string
+  anioTitulo: string
+  oficina: string
+}
+
+/**
+ * Fetches esquela PDFs (observation letters) for a given title.
+ * Returns an array of base64-encoded PDF strings.
+ * This endpoint does NOT require AES encryption or CAPTCHA.
+ */
+export async function descargarEsquela(params: EsquelaParams): Promise<string[]> {
+  const { codigoZona, codigoOficina } = parseOficina(params.oficina)
+  const numero = normalizeNumeroTitulo(params.numeroTitulo)
+
+  const res = await axios.post(
+    `${API_GATEWAY}/siguelo-esquela/listarEsquela`,
+    {
+      numeroTitulo: numero,
+      anioTitulo: params.anioTitulo,
+      codigoZona,
+      codigoOficina,
+    },
+    { headers: API_HEADERS, timeout: 30000 },
+  )
+
+  const data = res.data as {
+    codigoRespuesta?: string
+    lstEsquelas?: Array<{ contenido?: string; archivo?: string; nombreArchivo?: string }>
+  }
+
+  if (!data.lstEsquelas?.length) return []
+
+  return data.lstEsquelas
+    .map(e => e.contenido || e.archivo || '')
+    .filter(Boolean)
+}
+
+// ── Partidas ──────────────────────────────────────────────────────────────────
+
+export interface PartidaResult {
+  numeroPartida: string
+  areaRegistral: string
+  descripcion: string
+}
+
+export async function descargarPartidas(params: {
+  numeroTitulo: string
+  anioTitulo: string
+  oficina: string
+}): Promise<PartidaResult[]> {
+  const { codigoZona, codigoOficina } = parseOficina(params.oficina)
+  const numero = normalizeNumeroTitulo(params.numeroTitulo)
+
+  const payload = {
+    numeroTitulo: numero,
+    anioTitulo: params.anioTitulo,
+    codigoZona,
+    codigoOficina,
+    userApp: 'sigue+',
+    userCrea: 'sigue+',
+    status: 'A',
+  }
+
+  const res = await axios.post(
+    `${API_GATEWAY}/asientoinscripcion/listarPartidas`,
+    { dmFsdWU: encryptPayload(payload) },
+    { headers: API_HEADERS, timeout: 30000 },
+  )
+
+  const decrypted = decryptApiResponse(res.data) as {
+    lstPartidas?: Array<{ numeroPartida?: string; areaRegistral?: string; descripcion?: string }>
+  }
+
+  return (decrypted.lstPartidas || []).map(p => ({
+    numeroPartida: String(p.numeroPartida || ''),
+    areaRegistral: String(p.areaRegistral || ''),
+    descripcion: String(p.descripcion || ''),
+  }))
+}
+
+// ── Asientos de inscripción ───────────────────────────────────────────────────
+
+/**
+ * Downloads an inscripción asiento PDF.
+ * The API returns Java signed bytes; we convert them to unsigned before encoding as base64.
+ */
+export async function descargarAsiento(params: {
+  numeroPartida: string
+  oficina: string
+}): Promise<{ pdf: string; numeroPartida: string }> {
+  const { codigoZona, codigoOficina } = parseOficina(params.oficina)
+
+  const payload = {
+    numeroPartida: params.numeroPartida,
+    codigoZona,
+    codigoOficina,
+    userApp: 'sigue+',
+    userCrea: 'sigue+',
+    status: 'A',
+  }
+
+  const res = await axios.post(
+    `${API_GATEWAY}/asientoinscripcion/listarAsientos`,
+    { dmFsdWU: encryptPayload(payload) },
+    { headers: API_HEADERS, timeout: 30000 },
+  )
+
+  const decrypted = decryptApiResponse(res.data) as {
+    lstAsientos?: Array<{ contenido?: number[] | string; tipoContenido?: string }>
+  }
+
+  const asientos = decrypted.lstAsientos || []
+  if (asientos.length === 0) throw new Error('No se encontraron asientos de inscripción')
+
+  const contenido = asientos[0].contenido
+  let pdf: string
+
+  if (Array.isArray(contenido)) {
+    // Java signed bytes → unsigned → base64
+    const unsigned = (contenido as number[]).map(b => (b < 0 ? b + 256 : b))
+    pdf = Buffer.from(unsigned).toString('base64')
+  } else if (typeof contenido === 'string') {
+    // Already base64 or a string
+    pdf = contenido
+  } else {
+    throw new Error('Formato de asiento no reconocido')
+  }
+
+  return { pdf, numeroPartida: params.numeroPartida }
+}
+
 // ── Test helper ────────────────────────────────────────────────────────────────
 
 export async function testSunarp(

@@ -157,6 +157,30 @@ function initSchema(db: Database.Database) {
       enviado_at TEXT DEFAULT (datetime('now')),
       success INTEGER DEFAULT 1
     );
+
+    CREATE TABLE IF NOT EXISTS titulos_sunarp (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      oficina_registral TEXT NOT NULL,
+      oficina_nombre TEXT,
+      anio_titulo TEXT NOT NULL,
+      numero_titulo TEXT NOT NULL,
+      nombre_cliente TEXT NOT NULL,
+      email_cliente TEXT,
+      whatsapp_cliente TEXT,
+      ultimo_estado TEXT DEFAULT 'SIN DATOS',
+      ultima_consulta TEXT,
+      area_registral TEXT,
+      numero_partida TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS historial_estados_sunarp (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      titulo_id INTEGER NOT NULL REFERENCES titulos_sunarp(id),
+      estado_anterior TEXT,
+      estado_nuevo TEXT NOT NULL,
+      detectado_en TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Migrate: add archived_at/deleted_at columns if missing
@@ -780,3 +804,85 @@ export function getCasosStats() {
 }
 
 export default getDb;
+
+// ── SUNARP Síguelo module ─────────────────────────────────────────────────────
+
+export interface TituloSunarp {
+  id: number;
+  oficina_registral: string;
+  oficina_nombre: string | null;
+  anio_titulo: string;
+  numero_titulo: string;
+  nombre_cliente: string;
+  email_cliente: string | null;
+  whatsapp_cliente: string | null;
+  ultimo_estado: string;
+  ultima_consulta: string | null;
+  area_registral: string | null;
+  numero_partida: string | null;
+  created_at: string;
+}
+
+export interface HistorialSunarp {
+  id: number;
+  titulo_id: number;
+  estado_anterior: string | null;
+  estado_nuevo: string;
+  detectado_en: string;
+}
+
+export function getAllTitulosSunarp(): TituloSunarp[] {
+  return getDb().prepare(
+    'SELECT * FROM titulos_sunarp ORDER BY created_at DESC'
+  ).all() as TituloSunarp[];
+}
+
+export function getTituloSunarpById(id: number): TituloSunarp | null {
+  return getDb().prepare('SELECT * FROM titulos_sunarp WHERE id = ?').get(id) as TituloSunarp | null;
+}
+
+export function createTituloSunarp(data: Omit<TituloSunarp, 'id' | 'created_at' | 'ultimo_estado' | 'ultima_consulta' | 'area_registral' | 'numero_partida'>): TituloSunarp {
+  const db = getDb();
+  const result = db.prepare(`
+    INSERT INTO titulos_sunarp
+      (oficina_registral, oficina_nombre, anio_titulo, numero_titulo, nombre_cliente, email_cliente, whatsapp_cliente)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    data.oficina_registral,
+    data.oficina_nombre ?? null,
+    data.anio_titulo,
+    data.numero_titulo,
+    data.nombre_cliente,
+    data.email_cliente ?? null,
+    data.whatsapp_cliente ?? null,
+  );
+  return getTituloSunarpById(result.lastInsertRowid as number)!;
+}
+
+export function updateTituloSunarp(id: number, data: Partial<TituloSunarp>) {
+  const db = getDb();
+  const fields = Object.keys(data).filter(k => k !== 'id');
+  if (fields.length === 0) return;
+  const setClause = fields.map(f => `${f} = ?`).join(', ');
+  const values = fields.map(f => (data as Record<string, unknown>)[f]);
+  db.prepare(`UPDATE titulos_sunarp SET ${setClause} WHERE id = ?`).run(...values, id);
+}
+
+export function deleteTituloSunarp(id: number) {
+  const db = getDb();
+  db.prepare('DELETE FROM historial_estados_sunarp WHERE titulo_id = ?').run(id);
+  db.prepare('DELETE FROM titulos_sunarp WHERE id = ?').run(id);
+}
+
+export function addHistorialSunarp(tituloId: number, estadoAnterior: string | null, estadoNuevo: string) {
+  getDb().prepare(`
+    INSERT INTO historial_estados_sunarp (titulo_id, estado_anterior, estado_nuevo)
+    VALUES (?, ?, ?)
+  `).run(tituloId, estadoAnterior, estadoNuevo);
+}
+
+export function getHistorialSunarp(tituloId: number): HistorialSunarp[] {
+  return getDb().prepare(
+    'SELECT * FROM historial_estados_sunarp WHERE titulo_id = ? ORDER BY detectado_en DESC LIMIT 20'
+  ).all(tituloId) as HistorialSunarp[];
+}
