@@ -81,7 +81,7 @@ export default function SunarpSigueloPage() {
 
   // Form fields
   const [oficina, setOficina] = useState('0101');
-  const [otraNombre, setOtraNombre] = useState('');
+  const otraNombre = '';
   const [anio, setAnio] = useState(String(new Date().getFullYear()));
   const [numero, setNumero] = useState('');
   const [nombre, setNombre] = useState('');

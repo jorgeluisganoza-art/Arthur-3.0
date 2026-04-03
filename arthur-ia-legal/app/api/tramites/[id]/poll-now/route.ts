@@ -144,10 +144,11 @@ export async function POST(
         : 'Sin cambios desde la última revisión'
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[poll-now] Error:', error)
+    const message = error instanceof Error ? error.message : 'Error desconocido'
     return NextResponse.json(
-      { error: error.message, portalDown: true },
+      { error: message, portalDown: true },
       { status: 500 }
     )
   }

@@ -17,7 +17,7 @@ export default function DashboardLayout({
     if (!auth) {
       router.replace('/');
     } else {
-      setAuthorized(true);
+      queueMicrotask(() => setAuthorized(true));
     }
   }, [router]);
 

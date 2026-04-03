@@ -545,15 +545,6 @@ export const OFICINAS_ESTATICAS: SunarpOficina[] = [
 
 // ── 2captcha Turnstile solver ─────────────────────────────────────────────────
 
-async function getPublicIp(): Promise<string> {
-  try {
-    const res = await axios.get('https://api.ipify.org?format=json', { timeout: 5000 })
-    return (res.data as { ip: string }).ip || '0.0.0.0'
-  } catch {
-    return '0.0.0.0'
-  }
-}
-
 export async function solveTurnstileWith2Captcha(): Promise<string | null> {
   const apiKey = process.env.TWOCAPTCHA_API_KEY
   if (!apiKey) return null
@@ -813,7 +804,7 @@ export async function testSunarp(
   try {
     const oficinas = await getOficinas()
     console.log(`Loaded ${oficinas.length} oficinas`)
-  } catch (e) {
+  } catch {
     console.log('Could not load oficinas (non-fatal)')
   }
 

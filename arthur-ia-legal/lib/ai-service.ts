@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import type { Caso } from '@/lib/db';
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -304,9 +305,9 @@ Criterios de urgencia:
 
 export async function generarEscritoJudicial(
   tipo: string,
-  casoData: any,
+  casoData: Caso,
   instrucciones: string,
-  historialChat: any[]
+  historialChat: Array<{ role?: string; content?: string }>
 ): Promise<{ message: string, documentContent: string, isComplete: boolean }> {
   const systemPrompt = `Eres Arthur-IA, asistente legal especializado
 en redacción de escritos judiciales para el Poder Judicial del Perú.

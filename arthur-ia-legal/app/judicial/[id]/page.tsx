@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { formatPartesDisplay } from '@/lib/format-partes-judicial';
 
@@ -67,7 +67,7 @@ export default function JudicialCaseDetail({ params }: { params: Promise<{ id: s
   const [tab, setTab] = useState<Tab>('resumen');
   const [demoStep, setDemoStep] = useState<string | null>(null);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/casos/${id}`);
@@ -76,9 +76,9 @@ export default function JudicialCaseDetail({ params }: { params: Promise<{ id: s
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
 
-  useEffect(() => { void loadData(); }, [id]);
+  useEffect(() => { void loadData(); }, [loadData]);
 
   const lastMov = caso?.movimientos?.[0] || null;
   const totalMov = caso?.movimientos?.length || 0;

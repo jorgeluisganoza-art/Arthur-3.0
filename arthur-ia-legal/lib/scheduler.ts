@@ -4,7 +4,6 @@ import { getNextStepSuggestion } from '@/lib/ai-service'
 import { sendWhatsApp, sendEmail } from '@/lib/notifications'
 
 declare global {
-  // eslint-disable-next-line no-var
   var _arthurSchedulerStarted: boolean
 }
 

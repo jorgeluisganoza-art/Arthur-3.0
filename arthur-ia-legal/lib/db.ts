@@ -7,9 +7,12 @@ let _db: Database.Database | null = null;
 function getDb(): Database.Database {
   if (!_db) {
     const isVercel = !!process.env.VERCEL;
+    const rawPath = process.env.DB_PATH || './data/arthur.db';
     const dbPath = isVercel
       ? '/tmp/arthur.db'
-      : path.resolve(process.cwd(), process.env.DB_PATH || './data/arthur.db');
+      : path.isAbsolute(rawPath)
+        ? rawPath
+        : path.join(/* turbopackIgnore: true */ process.cwd(), rawPath);
     const dataDir = path.dirname(dbPath);
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });

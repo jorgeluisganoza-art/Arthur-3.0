@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use, useRef, type CSSProperties } from 'react';
+import { useEffect, useState, use, useRef, useCallback, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
@@ -129,7 +129,7 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
   const [turnstileError, setTurnstileError] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance | null>(null);
 
-  async function loadTramite() {
+  const loadTramite = useCallback(async () => {
     setFetchError(null);
     try {
       const res = await fetch(`/api/tramites/${id}`);
@@ -150,11 +150,11 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
       setFetchError('No se pudo conectar con el servidor');
     }
     setLoading(false);
-  }
+  }, [id]);
 
   useEffect(() => {
-    loadTramite();
-  }, [id]);
+    void loadTramite();
+  }, [loadTramite]);
 
   async function handleDemo() {
     setDemoResult(null);

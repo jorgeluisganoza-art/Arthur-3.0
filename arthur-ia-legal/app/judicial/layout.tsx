@@ -11,7 +11,7 @@ export default function JudicialLayout({ children }: { children: React.ReactNode
   useEffect(() => {
     const auth = localStorage.getItem('arthur_auth');
     if (!auth) router.replace('/login');
-    else setAuthorized(true);
+    else queueMicrotask(() => setAuthorized(true));
   }, [router]);
 
   if (!authorized) {

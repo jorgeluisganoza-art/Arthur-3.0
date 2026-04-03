@@ -84,7 +84,7 @@ export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
       .catch(() => {});
     try {
       const auth = JSON.parse(localStorage.getItem('arthur_auth') || '{}');
-      if (auth.email) setUserEmail(auth.email);
+      if (auth.email) queueMicrotask(() => setUserEmail(auth.email));
     } catch { /* ignore */ }
   }, []);
 

@@ -6,7 +6,6 @@ import {
   updateTituloSunarp,
   deleteTituloSunarp,
   addHistorialSunarp,
-  type TituloSunarp,
 } from '@/lib/db'
 import {
   consultarTituloSUNARP,

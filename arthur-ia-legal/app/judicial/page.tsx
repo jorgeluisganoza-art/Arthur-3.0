@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { formatPartesDisplay } from '@/lib/format-partes-judicial';
 
@@ -79,7 +79,7 @@ export default function JudicialDashboardPage() {
     polling_frequency_hours: 4,
   });
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [casosRes, statsRes] = await Promise.all([
@@ -102,9 +102,9 @@ export default function JudicialDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  useEffect(() => { void loadData(); }, []);
+  useEffect(() => { void loadData(); }, [loadData]);
 
   const highAlertCase = useMemo(() => {
     return casos.find(c => (details[c.id]?.movimientos || []).some(m => m.es_nuevo === 1 && m.urgencia === 'alta'));
