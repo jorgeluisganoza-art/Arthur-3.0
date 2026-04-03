@@ -39,6 +39,14 @@ const IconChat = () => (
   </svg>
 );
 
+const IconSunarp = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="8" cy="8" r="6.5" />
+    <path d="M5.5 8h5M8 5.5v5" />
+    <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" strokeWidth="1" opacity="0.5" />
+  </svg>
+);
+
 const IconArchive = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="1" y="2" width="14" height="3" rx="0.5" />
@@ -86,6 +94,7 @@ export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
     { href: '/dashboard/agenda', label: 'Agenda de Plazos', hasAlert: false, Icon: IconCalendar },
     { href: '/dashboard/alertas', label: 'Alertas', hasAlert: false, Icon: IconBell },
     { href: '/dashboard/chat', label: 'Consulta Legal', hasAlert: false, Icon: IconChat },
+    { href: '/dashboard/siguelo', label: 'SUNARP Síguelo', hasAlert: false, Icon: IconSunarp },
     { href: '/dashboard/archivados', label: 'Archivados', hasAlert: false, Icon: IconArchive },
     { href: '/dashboard/eliminados', label: 'Eliminados', hasAlert: false, Icon: IconTrash },
   ];

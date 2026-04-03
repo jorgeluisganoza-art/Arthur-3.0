@@ -15,7 +15,7 @@
     "@google/generative-ai": "^0.24.1",
     "@marsidev/react-turnstile": "^1.5.0",
     "@react-three/fiber": "^9.5.0",
-    "@sparticuz/chromium-min": "^130.0.0",
+    "@sparticuz/chromium-min": "^143.0.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/crypto-js": "^4.2.2",
     "@types/node-cron": "^3.0.11",
@@ -28,11 +28,12 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.4",
     "openai": "^6.33.0",
-    "puppeteer-core": "^23.11.1",
+    "puppeteer-core": "^24.40.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "three": "^0.183.2",
-    "twilio": "^5.13.1"
+    "twilio": "^5.13.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
