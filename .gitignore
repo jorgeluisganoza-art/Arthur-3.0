@@ -4,3 +4,6 @@
 
 # IDE / local tooling
 .cursor/
+
+# Local full-repo clones (not part of monorepo tree)
+Arthur-3.0/
