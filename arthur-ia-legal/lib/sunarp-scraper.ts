@@ -822,6 +822,5 @@ export async function testSunarp(
   return result
 }
 
-if (require.main === module) {
-  testSunarp()
-}
+// Run with: npx tsx lib/sunarp-scraper.ts
+

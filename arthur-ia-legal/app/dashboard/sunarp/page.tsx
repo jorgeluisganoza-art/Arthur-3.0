@@ -8,7 +8,7 @@ import {
   descargarEsquelaSunarp,
   descargarAsientoSunarp,
 } from '@/app/actions/sunarp';
-import { OFICINAS_ESTATICAS } from '@/lib/sunarp-scraper';
+import { OFICINAS_ESTATICAS } from '@/lib/sunarp-oficinas';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

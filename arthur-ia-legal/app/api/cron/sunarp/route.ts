@@ -6,13 +6,24 @@ import { enviarAlertaEmail, enviarAlertaWhatsApp } from '@/lib/alertas-sunarp'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300 // 5 min — Vercel Pro allows up to 300s
 
+function isCronAuthorized(request: NextRequest, cronSecret: string): boolean {
+  const authHeader = request.headers.get('authorization')
+  const bearer = authHeader?.replace(/^Bearer\s+/i, '')?.trim()
+  if (bearer === cronSecret) return true
+  const q = request.nextUrl.searchParams.get('secret')?.trim()
+  if (q === cronSecret) return true
+  const xh = request.headers.get('x-cron-secret')?.trim()
+  if (xh === cronSecret) return true
+  return false
+}
+
 export async function GET(request: NextRequest) {
-  // Auth: Bearer CRON_SECRET (set by Vercel Cron or manual call)
+  // Auth: Bearer CRON_SECRET (Vercel injects when CRON_SECRET is set), or ?secret=, or x-cron-secret
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {
-    const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    if (token !== cronSecret) {
+    const ok = isCronAuthorized(request, cronSecret)
+    if (!ok) {
+      console.warn('[CronSUNARP] 401 — use Authorization: Bearer, ?secret=, or x-cron-secret')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }

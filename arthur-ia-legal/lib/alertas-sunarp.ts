@@ -1,5 +1,6 @@
 import twilio from 'twilio';
 import nodemailer from 'nodemailer';
+import { getAppBaseUrl } from '@/lib/app-url';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -78,7 +79,7 @@ export async function enviarAlertaWhatsApp(
 
 ${params.detalle ? `📋 *Detalle:* ${params.detalle.substring(0, 200)}` : ''}
 
-_arthuria.legal/dashboard/sunarp_`;
+${getAppBaseUrl()}/dashboard/sunarp`;
 
     const toNumber = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
     await client.messages.create({ from, to: toNumber, body });
@@ -118,6 +119,7 @@ export async function enviarAlertaEmail(
     const bg = statusBg(params.estado);
     const emoji = statusEmoji(params.estado);
 
+    const base = getAppBaseUrl();
     const html = `
 <!DOCTYPE html>
 <html lang="es">
@@ -169,7 +171,7 @@ export async function enviarAlertaEmail(
         <!-- CTA -->
         <tr>
           <td style="padding:32px;text-align:center;">
-            <a href="http://localhost:3000/dashboard/sunarp" style="display:inline-block;background:#0f0f0f;color:#f5f0e8;font-family:'Courier New',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;padding:14px 28px;text-decoration:none;">Ver seguimiento →</a>
+            <a href="${base}/dashboard/sunarp" style="display:inline-block;background:#0f0f0f;color:#f5f0e8;font-family:'Courier New',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;padding:14px 28px;text-decoration:none;">Ver seguimiento →</a>
           </td>
         </tr>
         <!-- Footer -->
@@ -233,6 +235,7 @@ export async function enviarConfirmacionAgregado(
     const emoji = statusEmoji(params.estadoInicial);
     const color = statusColor(params.estadoInicial);
     const bg = statusBg(params.estadoInicial);
+    const base = getAppBaseUrl();
 
     const html = `
 <!DOCTYPE html>
@@ -271,7 +274,7 @@ export async function enviarConfirmacionAgregado(
         </tr>
         <tr>
           <td style="padding:32px;text-align:center;">
-            <a href="http://localhost:3000/dashboard/sunarp" style="display:inline-block;background:#0f0f0f;color:#f5f0e8;font-family:'Courier New',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;padding:14px 28px;text-decoration:none;">Ver seguimiento →</a>
+            <a href="${base}/dashboard/sunarp" style="display:inline-block;background:#0f0f0f;color:#f5f0e8;font-family:'Courier New',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;padding:14px 28px;text-decoration:none;">Ver seguimiento →</a>
           </td>
         </tr>
         <tr>
