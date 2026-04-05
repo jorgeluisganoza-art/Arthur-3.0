@@ -2,6 +2,7 @@
 
 import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
 
 interface Caso {
   id: number;
@@ -18,16 +19,28 @@ const DOC_TYPES = [
   { value: 'contestacion', label: 'Contestación de demanda' },
   { value: 'apelacion', label: 'Recurso de apelación' },
   { value: 'queja', label: 'Recurso de queja' },
-  { value: 'escrito_impulso', label: 'Escrito de impulso' },
-  { value: 'escrito_generico', label: 'Otro' },
+  { value: 'impulso', label: 'Escrito de impulso' },
+  { value: 'generico', label: 'Otro' },
 ];
 
-export default function JudicialRedactarPage({ params }: { params: Promise<{ id: string }> }) {
+export default function JudicialRedactarPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tipo?: string; contexto?: string; movimientoId?: string }>;
+}) {
   const { id } = use(params);
+  const sp = use(searchParams);
+  const tipoFromUrl = sp.tipo || '';
+  const contextoFromUrl = sp.contexto ? decodeURIComponent(sp.contexto) : '';
+
   const [caso, setCaso] = useState<Caso | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [tipo, setTipo] = useState('contestacion');
+  const [tipo, setTipo] = useState(
+    DOC_TYPES.find(d => d.value === tipoFromUrl) ? tipoFromUrl : 'contestacion'
+  );
   const [isTyping, setIsTyping] = useState(false);
   const [documentContent, setDocumentContent] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
@@ -39,9 +52,13 @@ export default function JudicialRedactarPage({ params }: { params: Promise<{ id:
   useEffect(() => {
     if (!caso || messages.length > 0) return;
     const last = caso.movimientos?.[0];
-    const intro = `Revisé el expediente ${caso.numero_expediente}. El último movimiento fue ${last?.acto || 'sin dato'} del ${last?.fecha || 'sin fecha'}. Para redactar tu ${DOC_TYPES.find(d => d.value === tipo)?.label?.toLowerCase() || 'escrito'}, necesito algunos datos.`;
+    const docLabel = DOC_TYPES.find(d => d.value === tipo)?.label?.toLowerCase() || 'escrito';
+    let intro = `Revisé el expediente ${caso.numero_expediente}. El último movimiento fue ${last?.acto || 'sin dato'} del ${last?.fecha || 'sin fecha'}. Para redactar tu ${docLabel}, necesito algunos datos.`;
+    if (contextoFromUrl) {
+      intro += `\n\nContexto del movimiento judicial: ${contextoFromUrl}`;
+    }
     setMessages([{ role: 'assistant', content: intro }]);
-  }, [caso, messages.length, tipo]);
+  }, [caso, messages.length, tipo, contextoFromUrl]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isTyping]);
 
@@ -84,6 +101,32 @@ PRIMER OTROSÍ DIGO:`,
 
   if (!caso) return <div style={{ padding: '48px 64px', fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', color: 'var(--muted)' }}>Cargando...</div>;
 
+  const casoAlias = caso.numero_expediente;
+
+  async function downloadWord() {
+    const lines = documentContent.split('\n');
+    const doc = new Document({
+      sections: [{
+        children: lines.map(line =>
+          new Paragraph({
+            children: [new TextRun({
+              text: line,
+              font: 'Times New Roman',
+              size: 24,
+            })],
+          }),
+        ),
+      }],
+    });
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `escrito-${casoAlias}-${new Date().toISOString().split('T')[0]}.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', height: '100vh' }}>
       <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--line)' }}>
@@ -99,7 +142,7 @@ PRIMER OTROSÍ DIGO:`,
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px', background: 'var(--paper)' }}>
           {messages.map((m, i) => (
             <div key={i} style={{ marginBottom: '12px', display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <div style={{ maxWidth: '84%', background: m.role === 'user' ? 'var(--accent-navy)' : 'var(--surface)', color: 'var(--ink)', border: m.role === 'user' ? 'none' : '1px solid var(--line)', padding: '12px 14px', fontFamily: 'Inter, sans-serif', fontSize: '14px', whiteSpace: 'pre-wrap' }}>
+              <div style={{ maxWidth: '84%', background: m.role === 'user' ? 'var(--accent-navy)' : 'var(--surface)', color: m.role === 'user' ? 'white' : 'var(--ink)', border: m.role === 'user' ? 'none' : '1px solid var(--line)', padding: '12px 14px', fontFamily: 'Inter, sans-serif', fontSize: '14px', whiteSpace: 'pre-wrap' }}>
                 {m.content}
               </div>
             </div>
@@ -114,9 +157,12 @@ PRIMER OTROSÍ DIGO:`,
       </div>
 
       <div style={{ background: 'var(--paper)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--line)', padding: '20px 28px', display: 'flex', justifyContent: 'space-between' }}>
+        <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--line)', padding: '20px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px' }}>Documento judicial</div>
-          <button onClick={() => navigator.clipboard.writeText(documentContent).catch(() => {})} style={{ border: '1px solid var(--line-strong)', background: 'transparent', padding: '8px 12px', fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', cursor: 'pointer' }}>Copiar</button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button type="button" onClick={() => void downloadWord()} disabled={!documentContent} style={{ border: '1px solid var(--line-strong)', background: 'transparent', padding: '8px 12px', fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', cursor: documentContent ? 'pointer' : 'not-allowed', opacity: documentContent ? 1 : 0.5 }}>Descargar Word</button>
+            <button type="button" onClick={() => navigator.clipboard.writeText(documentContent).catch(() => {})} style={{ border: '1px solid var(--line-strong)', background: 'transparent', padding: '8px 12px', fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', cursor: 'pointer' }}>Copiar</button>
+          </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px 40px' }}>
           {documentContent ? (

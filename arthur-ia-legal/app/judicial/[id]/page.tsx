@@ -2,18 +2,24 @@
 
 import { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import CalendarButtons from '@/components/CalendarButtons';
 import { formatPartesDisplay } from '@/lib/format-partes-judicial';
 
 type Tab = 'resumen' | 'movimientos' | 'documentos' | 'agenda' | 'arthur';
 
 interface Movimiento {
   id: number;
+  numero: string | null;
   fecha: string | null;
   acto: string | null;
   folio: string | null;
   sumilla: string | null;
+  tiene_documento: number;
+  documento_url: string | null;
+  tiene_resolucion: number;
   urgencia: 'alta' | 'normal' | 'info';
   ai_sugerencia: string | null;
+  ai_analisis: string | null;
 }
 interface Audiencia { id: number; descripcion: string; fecha: string; tipo: string | null; }
 interface Escrito { id: number; tipo: string; contenido: string; created_at: string; }
@@ -32,6 +38,7 @@ interface CasoDetail {
   prioridad: 'alta' | 'media' | 'baja';
   ultimo_movimiento: string | null;
   ultimo_movimiento_fecha: string | null;
+  last_checked: string | null;
   movimientos: Movimiento[];
   audiencias: Audiencia[];
   escritos: Escrito[];
@@ -47,25 +54,14 @@ function daysUntil(dateStr: string): number {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-function googleLink(title: string, date: string, details: string) {
-  const d = new Date(date);
-  const end = new Date(d.getTime() + 60 * 60 * 1000);
-  const fmt = (v: Date) => v.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(d)}/${fmt(end)}&details=${encodeURIComponent(details)}`;
-}
-
-function outlookLink(title: string, date: string, details: string) {
-  const d = new Date(date);
-  const end = new Date(d.getTime() + 60 * 60 * 1000);
-  return `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(title)}&startdt=${encodeURIComponent(d.toISOString())}&enddt=${encodeURIComponent(end.toISOString())}&body=${encodeURIComponent(details)}&path=/calendar/action/compose`;
-}
-
 export default function JudicialCaseDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [caso, setCaso] = useState<CasoDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('resumen');
   const [demoStep, setDemoStep] = useState<string | null>(null);
+  const [analisisMap, setAnalisisMap] = useState<Record<number, string>>({});
+  const [analizando, setAnalizando] = useState<number | null>(null);
 
   async function loadData() {
     setLoading(true);
@@ -89,14 +85,32 @@ export default function JudicialCaseDetail({ params }: { params: Promise<{ id: s
 
   async function handleReviewNow() {
     setDemoStep('Conectando con el CEJ...');
-    await new Promise(r => setTimeout(r, 1200));
-    setDemoStep('Descargando movimientos del expediente...');
-    await new Promise(r => setTimeout(r, 1300));
-    setDemoStep('Analizando con Arthur-IA...');
-    await new Promise(r => setTimeout(r, 1000));
     await fetch(`/api/casos/${id}/poll-now`, { method: 'POST' });
     await loadData();
     setDemoStep(null);
+  }
+
+  async function analizarActuacion(m: Movimiento) {
+    if (analizando === m.id) return;
+    // Toggle off if already shown
+    if (analisisMap[m.id]) {
+      setAnalisisMap(prev => { const n = { ...prev }; delete n[m.id]; return n; });
+      return;
+    }
+    setAnalizando(m.id);
+    try {
+      const res = await fetch(`/api/casos/${id}/analizar-actuacion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actuacionId: m.id, acto: m.acto, sumilla: m.sumilla }),
+      });
+      const data = await res.json() as { analisis: string };
+      setAnalisisMap(prev => ({ ...prev, [m.id]: data.analisis || 'Sin análisis disponible.' }));
+    } catch {
+      setAnalisisMap(prev => ({ ...prev, [m.id]: 'Error al analizar. Intenta de nuevo.' }));
+    } finally {
+      setAnalizando(null);
+    }
   }
 
   if (loading) return <div style={{ padding: '48px 64px', fontFamily: 'DM Mono, monospace', fontSize: '11px', textTransform: 'uppercase', color: 'var(--muted)' }}>Cargando caso...</div>;
@@ -184,21 +198,122 @@ export default function JudicialCaseDetail({ params }: { params: Promise<{ id: s
       )}
 
       {tab === 'movimientos' && (
-        <div style={{ paddingLeft: '20px', borderLeft: '1px solid var(--line-mid)' }}>
-          {caso.movimientos.map(m => (
-            <div key={m.id} style={{ position: 'relative', padding: '0 0 22px 14px' }}>
-              <div style={{ position: 'absolute', left: '-5px', top: '6px', width: '9px', height: '9px', borderRadius: '50%', background: colorUrgencia(m.urgencia) }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
-                <div>
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--muted)' }}>{m.fecha || 'Sin fecha'}</div>
-                  <span style={{ display: 'inline-block', marginTop: '6px', border: `1px solid ${colorUrgencia(m.urgencia)}`, color: colorUrgencia(m.urgencia), padding: '3px 8px', fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase' }}>{m.acto || 'Movimiento'}</span>
-                  <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', marginTop: '8px' }}>{m.sumilla}</p>
-                  {m.ai_sugerencia && <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--accent-navy)', fontStyle: 'italic' }}>Arthur-IA: {m.ai_sugerencia}</p>}
-                </div>
-                <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>Folio: {m.folio || '—'}</div>
-              </div>
+        <div>
+          {/* Header bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--muted)' }}>
+                {caso.movimientos.length} actuaciones registradas
+              </span>
+              {caso.last_checked && (
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--muted)', marginLeft: '12px' }}>
+                  · Revisado {(() => {
+                    const diff = Date.now() - new Date(caso.last_checked).getTime();
+                    const mins = Math.floor(diff / 60000);
+                    if (mins < 1) return 'ahora';
+                    if (mins < 60) return `hace ${mins}min`;
+                    const hrs = Math.floor(mins / 60);
+                    if (hrs < 24) return `hace ${hrs}h`;
+                    return `hace ${Math.floor(hrs / 24)}d`;
+                  })()}
+                </span>
+              )}
             </div>
-          ))}
+            <button
+              onClick={() => void handleReviewNow()}
+              disabled={!!demoStep}
+              style={{ background: 'var(--accent-navy)', color: 'white', border: 'none', padding: '8px 16px', fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', cursor: demoStep ? 'not-allowed' : 'pointer', opacity: demoStep ? 0.7 : 1 }}
+            >
+              {demoStep || 'Actualizar desde CEJ'}
+            </button>
+          </div>
+
+          {caso.movimientos.length === 0 ? (
+            <div style={{ color: 'var(--muted)', fontFamily: 'Inter, sans-serif', padding: '24px 0' }}>
+              No hay actuaciones registradas. Haz clic en "Actualizar desde CEJ" para obtener los movimientos.
+            </div>
+          ) : (
+            <div style={{ paddingLeft: '20px', borderLeft: '1px solid var(--line-mid)' }}>
+              {caso.movimientos.map(m => {
+                const actoUpper = (m.acto || '').toUpperCase();
+                const ACTOS_ESCRITO = ['SENTENCIA', 'AUTO', 'RESOLUCIÓN', 'DECRETO', 'ADMISORIO', 'NOTIFICACIÓN', 'EMPLAZAMIENTO', 'REQUERIMIENTO', 'APERCIBIMIENTO'];
+                const requiereEscrito = m.urgencia === 'alta' || ACTOS_ESCRITO.some(a => actoUpper.includes(a));
+                const tipoSugerido = actoUpper.includes('SENTENCIA') ? 'apelacion'
+                  : actoUpper.includes('ADMISORIO') || actoUpper.includes('EMPLAZAMIENTO') ? 'contestacion'
+                  : actoUpper.includes('REQUERIMIENTO') || actoUpper.includes('APERCIBIMIENTO') ? 'impulso'
+                  : 'generico';
+                const contexto = encodeURIComponent(m.sumilla || m.acto || '');
+                const analisis = analisisMap[m.id] || m.ai_analisis;
+                return (
+                  <div key={m.id} style={{ position: 'relative', padding: '0 0 24px 14px' }}>
+                    <div style={{ position: 'absolute', left: '-5px', top: '6px', width: '9px', height: '9px', borderRadius: '50%', background: colorUrgencia(m.urgencia) }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        {m.numero && (
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--muted)', marginRight: '10px' }}>#{m.numero}</span>
+                        )}
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--muted)' }}>{m.fecha || 'Sin fecha'}</span>
+                        <div style={{ marginTop: '6px' }}>
+                          <span style={{ display: 'inline-block', border: `1px solid ${colorUrgencia(m.urgencia)}`, color: colorUrgencia(m.urgencia), padding: '3px 8px', fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase' }}>{m.acto || 'Movimiento'}</span>
+                        </div>
+                        <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', marginTop: '8px', lineHeight: 1.65 }}>{m.sumilla}</p>
+
+                        {m.ai_sugerencia && (
+                          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#166534', fontStyle: 'italic', marginTop: '6px' }}>
+                            Arthur-IA: {m.ai_sugerencia}
+                          </p>
+                        )}
+
+                        {/* Action buttons */}
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                          {(m.tiene_documento === 1 || m.tiene_resolucion === 1) && m.documento_url && (
+                            <a
+                              href={m.documento_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ display: 'inline-block', border: '1px solid var(--line-strong)', background: 'transparent', padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', color: 'var(--ink)', textDecoration: 'none', letterSpacing: '0.06em' }}
+                            >
+                              Ver documento
+                            </a>
+                          )}
+                          <button
+                            onClick={() => void analizarActuacion(m)}
+                            disabled={analizando === m.id}
+                            style={{ border: '1px solid var(--line-strong)', background: 'transparent', padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', cursor: analizando === m.id ? 'not-allowed' : 'pointer', color: 'var(--accent-navy)', letterSpacing: '0.06em', opacity: analizando === m.id ? 0.6 : 1 }}
+                          >
+                            {analizando === m.id ? '...' : analisisMap[m.id] ? 'Ocultar análisis' : 'Analizar con IA'}
+                          </button>
+                          {requiereEscrito && (
+                            <Link
+                              href={`/judicial/${caso.id}/redactar?tipo=${tipoSugerido}&movimientoId=${m.id}&contexto=${contexto}`}
+                              style={{ display: 'inline-block', background: '#166534', color: 'white', padding: '5px 12px', fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', textDecoration: 'none' }}
+                            >
+                              Redactar respuesta →
+                            </Link>
+                          )}
+                        </div>
+
+                        {/* AI Analysis inline */}
+                        {analisis && (
+                          <div style={{ marginTop: '12px', background: 'var(--surface)', borderLeft: '3px solid var(--accent-navy)', padding: '14px 18px' }}>
+                            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', textTransform: 'uppercase', color: 'var(--accent-navy)', marginBottom: '6px', letterSpacing: '0.08em' }}>
+                              Análisis Arthur-IA
+                            </div>
+                            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', lineHeight: 1.65, margin: 0, color: 'var(--ink)' }}>
+                              {analisis}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '11px', color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        Folio: {m.folio || '—'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -231,10 +346,7 @@ export default function JudicialCaseDetail({ params }: { params: Promise<{ id: s
                   <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>{a.descripcion}</div>
                   <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--muted)' }}>{a.fecha} · {a.tipo || 'evento'}</div>
                 </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button onClick={() => window.open(googleLink(`${a.descripcion} — ${caso.alias || caso.numero_expediente}`, a.fecha, caso.numero_expediente), '_blank')} style={{ border: '1px solid var(--line-strong)', background: 'transparent', padding: '6px 9px', fontFamily: 'DM Mono, monospace', fontSize: '9px', textTransform: 'uppercase', cursor: 'pointer' }}>Google Calendar</button>
-                  <button onClick={() => window.open(outlookLink(`${a.descripcion} — ${caso.alias || caso.numero_expediente}`, a.fecha, caso.numero_expediente), '_blank')} style={{ border: '1px solid var(--line-strong)', background: 'transparent', padding: '6px 9px', fontFamily: 'DM Mono, monospace', fontSize: '9px', textTransform: 'uppercase', cursor: 'pointer' }}>Outlook</button>
-                </div>
+                <CalendarButtons fecha={a.fecha} descripcion={a.descripcion} caso_alias={caso.alias || caso.numero_expediente} />
               </div>
             );
           })}
@@ -253,7 +365,7 @@ export default function JudicialCaseDetail({ params }: { params: Promise<{ id: s
       )}
 
       <button onClick={() => void handleReviewNow()} disabled={!!demoStep} style={{ marginTop: '24px', width: '100%', background: 'var(--ink)', color: 'var(--paper)', border: 'none', padding: '20px', fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '20px', cursor: demoStep ? 'not-allowed' : 'pointer' }}>
-        {demoStep || 'Simular revisión CEJ en tiempo real →'}
+        {demoStep || 'Revisar en CEJ ahora →'}
       </button>
     </div>
   );

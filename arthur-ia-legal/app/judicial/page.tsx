@@ -197,8 +197,19 @@ export default function JudicialDashboardPage() {
         </div>
 
         {casos.length === 0 ? (
-          <div style={{ padding: '56px 24px', textAlign: 'center', fontFamily: 'Inter, sans-serif', color: 'var(--muted)' }}>
-            No hay procesos registrados todavía.
+          <div style={{ padding: '64px 24px', textAlign: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '24px', color: 'var(--ink)', marginBottom: '12px' }}>
+              No tienes procesos judiciales aún
+            </div>
+            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', color: 'var(--muted)', marginBottom: '24px' }}>
+              Agrega tu primer expediente para comenzar el seguimiento automático en el CEJ.
+            </div>
+            <button
+              onClick={() => setDrawerOpen(true)}
+              style={{ background: 'var(--ink)', color: 'var(--paper)', border: 'none', padding: '12px 24px', fontFamily: 'Inter, sans-serif', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+            >
+              + Agregar proceso
+            </button>
           </div>
         ) : casos.map(c => {
           const det = details[c.id] || { movimientos: [], audiencias: [] };

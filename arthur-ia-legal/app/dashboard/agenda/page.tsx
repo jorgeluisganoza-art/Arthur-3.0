@@ -192,9 +192,9 @@ export default function AgendaPage() {
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '6px' }}>
                             {getTipoPill(plazo.tipo)}
                             <CalendarButtons
-                              title={`${plazo.descripcion} — ${plazo.alias || ''}`}
-                              date={plazo.fecha_vencimiento}
-                              description={`Trámite: ${plazo.alias || ''}\nTipo: ${plazo.tipo || 'General'}`}
+                              fecha={plazo.fecha_vencimiento}
+                              descripcion={plazo.descripcion}
+                              caso_alias={plazo.alias}
                             />
                           </div>
                         </div>

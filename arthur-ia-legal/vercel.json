@@ -12,5 +12,16 @@
       "path": "/api/cron/sunarp",
       "schedule": "0 1 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/casos/[id]/poll-now/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/debug-cej/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/casos/[id]/analizar-actuacion/route.ts": {
+      "maxDuration": 30
+    }
+  }
 }

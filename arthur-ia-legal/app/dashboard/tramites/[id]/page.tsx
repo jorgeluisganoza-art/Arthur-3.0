@@ -744,9 +744,9 @@ export default function TramiteDetailPage({ params }: { params: Promise<{ id: st
                       {formatDate(plazo.fecha_vencimiento)}
                     </div>
                     <CalendarButtons
-                      title={`${plazo.descripcion} — ${tramite.alias}`}
-                      date={plazo.fecha_vencimiento}
-                      description={`Trámite: ${tramite.alias}\nTítulo: ${tramite.numero_titulo}-${tramite.anio}`}
+                      fecha={plazo.fecha_vencimiento}
+                      descripcion={plazo.descripcion}
+                      caso_alias={tramite.alias}
                     />
                   </div>
                 </div>

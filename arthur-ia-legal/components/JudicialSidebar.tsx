@@ -28,10 +28,10 @@ const IconBell = () => (
   </svg>
 );
 
-const IconSettings = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+const IconChat = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 2.5h12a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-.5.5H5L2 14V3a.5.5 0 0 1 .5-.5z" />
+    <path d="M5 6h6M5 8.5h4" />
   </svg>
 );
 
@@ -53,7 +53,7 @@ export default function JudicialSidebar() {
     { href: '/judicial', label: 'Mis Procesos', Icon: IconGrid },
     { href: '/judicial/agenda', label: 'Agenda', Icon: IconCalendar },
     { href: '/judicial/alertas', label: 'Alertas', Icon: IconBell },
-    { href: '/judicial/config', label: 'Configuración', Icon: IconSettings },
+    { href: '/judicial/chat', label: 'Chat IA', Icon: IconChat },
   ];
 
   const isActive = (href: string) => (href === '/judicial' ? pathname === '/judicial' : pathname.startsWith(href));

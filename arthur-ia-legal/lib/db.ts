@@ -117,13 +117,18 @@ function initSchema(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS movimientos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       caso_id INTEGER NOT NULL REFERENCES casos(id),
+      numero TEXT,
       fecha TEXT,
       acto TEXT,
       folio TEXT,
       sumilla TEXT,
+      tiene_documento INTEGER DEFAULT 0,
+      documento_url TEXT,
+      tiene_resolucion INTEGER DEFAULT 0,
       es_nuevo INTEGER DEFAULT 1,
       urgencia TEXT DEFAULT 'info',
       ai_sugerencia TEXT,
+      ai_analisis TEXT,
       scraped_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -193,153 +198,33 @@ function initSchema(db: Database.Database) {
     db.exec('ALTER TABLE tramites ADD COLUMN deleted_at TEXT');
   }
 
+  // Migrate: add new movimientos columns if missing
+  const movCols = db.prepare("PRAGMA table_info(movimientos)").all() as { name: string }[];
+  const movColNames = new Set(movCols.map(c => c.name));
+  if (!movColNames.has('numero')) {
+    db.exec('ALTER TABLE movimientos ADD COLUMN numero TEXT');
+  }
+  if (!movColNames.has('tiene_documento')) {
+    db.exec('ALTER TABLE movimientos ADD COLUMN tiene_documento INTEGER DEFAULT 0');
+  }
+  if (!movColNames.has('documento_url')) {
+    db.exec('ALTER TABLE movimientos ADD COLUMN documento_url TEXT');
+  }
+  if (!movColNames.has('tiene_resolucion')) {
+    db.exec('ALTER TABLE movimientos ADD COLUMN tiene_resolucion INTEGER DEFAULT 0');
+  }
+  if (!movColNames.has('ai_analisis')) {
+    db.exec('ALTER TABLE movimientos ADD COLUMN ai_analisis TEXT');
+  }
+
   // Purge tramites deleted > 30 days ago
   db.prepare(`
     DELETE FROM tramites
     WHERE deleted_at IS NOT NULL
       AND deleted_at < datetime('now', '-30 days')
   `).run();
-
-  // Seed data on first run
-  const count = db.prepare('SELECT COUNT(*) as c FROM tramites').get() as { c: number };
-  if (count.c === 0) {
-    seedData(db);
-  }
-
-  const casosCount = db.prepare('SELECT COUNT(*) as c FROM casos').get() as { c: number };
-  if (casosCount.c === 0) {
-    seedJudicialData(db);
-  }
 }
 
-function seedData(db: Database.Database) {
-  const now = new Date();
-
-  const insert = db.prepare(`
-    INSERT INTO tramites (tipo, numero_titulo, anio, oficina_registral, oficina_nombre,
-      alias, estado_actual, observacion_texto, polling_frequency_hours, whatsapp_number, email, activo)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-  `);
-
-  const r1 = insert.run(
-    'predio', '001234', '2024', '0101', 'Lima',
-    'Casa San Borja', 'OBSERVADO',
-    'Se observa el título por los siguientes motivos: 1) El plano de localización no coincide con las coordenadas UTM consignadas en la memoria descriptiva. 2) La firma del propietario en la minuta no cuenta con certificación notarial vigente. Sírvase subsanar en el plazo de ley.',
-    4, '+51999000001', 'hector@estudio.pe'
-  );
-
-  insert.run(
-    'empresa', '005678', '2024', '0101', 'Lima',
-    'Tech Solutions SAC', 'PENDIENTE',
-    null, 4, null, null
-  );
-
-  insert.run(
-    'vehiculo', '009012', '2024', '0101', 'Lima',
-    'Toyota Hilux', 'INSCRITO',
-    null, 8, null, null
-  );
-
-  // Seed plazos for tramite 1
-  const tramite1Id = r1.lastInsertRowid as number;
-  const fecha30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const fecha15 = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-  const insertPlazo = db.prepare(`
-    INSERT INTO plazos (tramite_id, descripcion, fecha_vencimiento, tipo)
-    VALUES (?, ?, ?, ?)
-  `);
-
-  insertPlazo.run(tramite1Id, 'Plazo de subsanación de observaciones', fecha30, 'subsanacion');
-  insertPlazo.run(tramite1Id, 'Plazo para recurso de apelación', fecha15, 'apelacion');
-
-  // Seed initial historial for tramite 1
-  db.prepare(`
-    INSERT INTO historial (tramite_id, estado, observacion, es_cambio)
-    VALUES (?, ?, ?, ?)
-  `).run(
-    tramite1Id,
-    'OBSERVADO',
-    'Se observa el título por los siguientes motivos: 1) El plano de localización no coincide con las coordenadas UTM consignadas en la memoria descriptiva.',
-    1
-  );
-}
-
-function seedJudicialData(db: Database.Database) {
-  const now = new Date();
-  const fecha30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const fecha45 = new Date(now.getTime() + 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-  const insertCaso = db.prepare(`
-    INSERT INTO casos (
-      numero_expediente, distrito_judicial, organo_jurisdiccional, juez, tipo_proceso,
-      etapa_procesal, partes, cliente, alias, monto, prioridad, ultimo_movimiento,
-      ultimo_movimiento_fecha, polling_frequency_hours, activo
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const c1 = insertCaso.run(
-    '10001-2022-0-1801-JR-CI-01',
-    'Lima',
-    '1er Juzgado Civil de Lima',
-    'Dr. Marcos Villanueva Torres',
-    'Civil',
-    'Probatoria',
-    '[{"rol":"demandante","nombre":"Constructora Andina SAC"},{"rol":"demandado","nombre":"Municipalidad de Lima"}]',
-    'Constructora Andina SAC',
-    'Constructora Andina vs Municipalidad',
-    'PEN 450,000',
-    'baja',
-    'Período de prueba ampliado',
-    '2025-02-03',
-    4,
-    1
-  );
-
-  insertCaso.run(
-    '10002-2023-0-1801-JR-LA-02',
-    'Arequipa',
-    '2do Juzgado Laboral de Arequipa',
-    null,
-    'Laboral',
-    'Instrucción',
-    '[{"rol":"demandante","nombre":"Juan Pérez Ríos"},{"rol":"demandado","nombre":"Empresa Minera del Sur SAC"}]',
-    'Juan Pérez Ríos',
-    'Pérez vs Minera Sur',
-    null,
-    'media',
-    null,
-    null,
-    4,
-    1
-  );
-
-  insertCaso.run(
-    '10003-2024-0-1801-JR-PE-03',
-    'Cusco',
-    null,
-    null,
-    'Penal',
-    'Juicio oral',
-    null,
-    null,
-    'Caso Banco Comercial',
-    null,
-    'alta',
-    null,
-    null,
-    2,
-    1
-  );
-
-  const caso1Id = c1.lastInsertRowid as number;
-  const insertAudiencia = db.prepare(`
-    INSERT INTO audiencias (caso_id, descripcion, fecha, tipo)
-    VALUES (?, ?, ?, ?)
-  `);
-  insertAudiencia.run(caso1Id, 'Presentación de descargos', fecha30, 'plazo');
-  insertAudiencia.run(caso1Id, 'Audiencia de pruebas', fecha45, 'audiencia');
-}
 
 // ── Query helpers ────────────────────────────────────────────────────────────
 
@@ -588,13 +473,18 @@ export interface Caso {
 export interface MovimientoJudicial {
   id: number;
   caso_id: number;
+  numero: string | null;
   fecha: string | null;
   acto: string | null;
   folio: string | null;
   sumilla: string | null;
+  tiene_documento: number;
+  documento_url: string | null;
+  tiene_resolucion: number;
   es_nuevo: number;
   urgencia: 'alta' | 'normal' | 'info';
   ai_sugerencia: string | null;
+  ai_analisis: string | null;
   scraped_at: string;
 }
 
@@ -699,28 +589,42 @@ export function getMovimientosByCaso(casoId: number): MovimientoJudicial[] {
 export function addMovimientoJudicial(
   casoId: number,
   data: {
+    numero?: string | null;
     fecha?: string | null;
     acto?: string | null;
     folio?: string | null;
     sumilla?: string | null;
+    tiene_documento?: boolean;
+    documento_url?: string | null;
+    tiene_resolucion?: boolean;
     es_nuevo?: boolean;
     urgencia?: 'alta' | 'normal' | 'info';
     ai_sugerencia?: string | null;
+    ai_analisis?: string | null;
   }
-) {
-  getDb().prepare(`
-    INSERT INTO movimientos (caso_id, fecha, acto, folio, sumilla, es_nuevo, urgencia, ai_sugerencia)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+): number {
+  const result = getDb().prepare(`
+    INSERT INTO movimientos
+      (caso_id, numero, fecha, acto, folio, sumilla,
+       tiene_documento, documento_url, tiene_resolucion,
+       es_nuevo, urgencia, ai_sugerencia, ai_analisis)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     casoId,
+    data.numero ?? null,
     data.fecha ?? null,
     data.acto ?? null,
     data.folio ?? null,
     data.sumilla ?? null,
+    data.tiene_documento ? 1 : 0,
+    data.documento_url ?? null,
+    data.tiene_resolucion ? 1 : 0,
     data.es_nuevo === false ? 0 : 1,
     data.urgencia ?? 'info',
-    data.ai_sugerencia ?? null
+    data.ai_sugerencia ?? null,
+    data.ai_analisis ?? null
   );
+  return result.lastInsertRowid as number;
 }
 
 export function getAudienciasByCaso(casoId: number): AudienciaJudicial[] {

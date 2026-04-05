@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import CalendarButtons from '@/components/CalendarButtons';
 
 interface Item {
   casoId: number;
@@ -71,16 +73,22 @@ export default function JudicialAgendaPage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {section.items.map((i, idx) => (
-                <a key={`${i.casoId}-${idx}`} href={`/judicial/${i.casoId}`} style={{ background: 'var(--surface)', border: '1px solid var(--line)', padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textDecoration: 'none' }}>
-                  <div>
-                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: 600 }}>{i.alias}</div>
-                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--muted)' }}>{i.descripcion}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px' }}>{i.fecha}</div>
-                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--muted)' }}>{i.tipo || 'evento'} · {daysUntil(i.fecha)}d</div>
-                  </div>
-                </a>
+                <div
+                  key={`${i.casoId}-${idx}`}
+                  style={{ background: 'var(--surface)', border: '1px solid var(--line)', padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
+                >
+                  <Link href={`/judicial/${i.casoId}`} style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
+                    <div>
+                      <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: 600 }}>{i.alias}</div>
+                      <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'var(--muted)' }}>{i.descripcion}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px' }}>{i.fecha}</div>
+                      <div style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: 'var(--muted)' }}>{i.tipo || 'evento'} · {daysUntil(i.fecha)}d</div>
+                    </div>
+                  </Link>
+                  <CalendarButtons fecha={i.fecha} descripcion={i.descripcion} caso_alias={i.alias} />
+                </div>
               ))}
             </div>
           </div>

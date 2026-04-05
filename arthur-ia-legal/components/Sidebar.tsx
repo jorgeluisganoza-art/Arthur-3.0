@@ -85,7 +85,7 @@ export default function Sidebar({ observadosCount = 0 }: SidebarProps) {
     { href: '/dashboard/sunarp', label: 'SUNARP Síguelo', hasAlert: false, Icon: IconSiguelo },
     { href: '/dashboard/agenda', label: 'Agenda de Plazos', hasAlert: false, Icon: IconCalendar },
     { href: '/dashboard/alertas', label: 'Alertas', hasAlert: false, Icon: IconBell },
-    { href: '/dashboard/chat', label: 'Consulta Legal', hasAlert: false, Icon: IconChat },
+    { href: '/chat', label: 'Chat IA', hasAlert: false, Icon: IconChat },
     { href: '/dashboard/archivados', label: 'Archivados', hasAlert: false, Icon: IconArchive },
     { href: '/dashboard/eliminados', label: 'Eliminados', hasAlert: false, Icon: IconTrash },
   ];

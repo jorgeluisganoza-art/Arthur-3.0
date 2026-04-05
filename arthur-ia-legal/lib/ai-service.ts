@@ -308,25 +308,164 @@ export async function generarEscritoJudicial(
   instrucciones: string,
   historialChat: any[]
 ): Promise<{ message: string, documentContent: string, isComplete: boolean }> {
-  const systemPrompt = `Eres Arthur-IA, asistente legal especializado
-en redacción de escritos judiciales para el Poder Judicial del Perú.
+  const ESTILO_REDACCION = `
+ESTILO Y FORMATO DE REDACCIÓN REQUERIDO:
+Usa exactamente este formato en todos los escritos:
+
+ENCABEZADO (siempre al inicio):
+    Expediente Nº: [número]
+    Cuaderno: Principal
+    Escrito N° [número]
+    Sumilla: [TIPO DE ESCRITO EN MAYÚSCULAS]
+    --------------------------------
+
+SALUDO AL JUEZ:
+Usar según el órgano:
+- Sala Superior: "SEÑOR PRESIDENTE DE LA SALA [nombre] DE LA CORTE SUPERIOR DE JUSTICIA DE LIMA:"
+- Juzgado: "AL SEÑOR JUEZ DEL [nombre del juzgado] DE LA CORTE SUPERIOR DE JUSTICIA DE LIMA:"
+Siempre en MAYÚSCULAS seguido de dos puntos.
+
+IDENTIFICACIÓN DE LA PARTE (primer párrafo):
+[NOMBRE EN NEGRITA Y MAYÚSCULAS], con [RUC/DNI] N° [número], con domicilio 
+real en [dirección] y domicilio procesal en la Casilla No. [número] del 
+Colegio de Abogados de Lima, [representado por / identificado con DNI N°], 
+respetuosamente [decimos/digo] lo siguiente:
+
+ESTRUCTURA DE SECCIONES:
+- Usar numeración romana: I. II. III.
+- Títulos de sección en NEGRITA Y SUBRAYADO
+- Subsecciones con números arábigos: 1. 2. 3. o 5.1, 5.1.1
+- Cada sección separada por espacio en blanco
+
+SECCIONES OBLIGATORIAS PARA DEMANDAS, CONTESTACIONES DE DEMANDA, APELACIONES y otros que sean similares (no para impulso o quejas) (en este orden):
+I.    PETITORIO (o RELACIÓN JURÍDICA PROCESAL si aplica)
+II.   VÍA PROCEDIMENTAL  
+III.  COMPETENCIA (si aplica)
+IV.   FUNDAMENTOS DE HECHO
+V.    FUNDAMENTOS DE DERECHO
+VI.   MEDIOS PROBATORIOS
+      POR TANTO:
+      PRIMER OTROSÍ DIGO: (si aplica)
+      SEGUNDO OTROSÍ DIGO: (si aplica)
+
+PETITORIO - fórmula exacta:
+"PRETENSIÓN AUTÓNOMA O PRINCIPAL: Que, de conformidad con lo establecido 
+en el artículo [X] del [Código/Ley]; SOLICITAMOS A SU DESPACHO QUE 
+[PETICIÓN EN MAYÚSCULAS Y SUBRAYADO]"
+
+Para pretensiones accesorias:
+"PRIMERA PRETENSIÓN ACCESORIA DE LA PRETENSIÓN AUTÓNOMA O PRINCIPAL:
+Que, al amparo de lo establecido en el artículo [X]..."
+
+CITAS LEGALES - formato exacto:
+- "artículo 475° del TUO del Código Procesal Civil"
+- "artículo 1970° del Código Civil"
+- "Resolución N° [número]/[año]-[entidad]"
+- "Decreto Legislativo N° [número]"
+Siempre incluir el nombre completo de la ley y número de decreto.
+
+ÉNFASIS EN EL TEXTO:
+- Argumentos centrales: EN MAYÚSCULAS Y NEGRITA
+- Términos legales clave: subrayados
+- Conclusiones importantes: "EN CONSECUENCIA," o "POR TANTO,"
+
+ANEXOS - referenciar como:
+"(Adjuntamos copia en calidad de Anexo [número]-[letra] del presente escrito)"
+
+CIERRE DEL DOCUMENTO:
+"POR TANTO:
+A Ud. pido admitir el presente escrito, tenerlo por presentado y darle 
+el trámite que corresponde conforme a ley.
+
+[Ciudad], [fecha]
+
+[NOMBRE DEL ABOGADO EN MAYÚSCULAS]
+[CAL N° número de colegiatura]"
+
+TONO Y ESTILO:
+- Extremadamente formal y técnico
+- Usar "su Sala", "su Despacho", "nuestra empresa/representada"
+- Referencias a resoluciones siempre con número completo
+- Párrafos de longitud media (4-8 líneas)
+- No usar lenguaje coloquial en ningún caso
+- Citar jurisprudencia cuando refuerce el argumento principal
+`
+
+  const PREGUNTAS_POR_TIPO: Record<string, string[]> = {
+    contestacion: [
+      '1. ¿Cuál es la posición de tu cliente respecto a los hechos de la demanda?',
+      '2. ¿Hay excepciones procesales que oponer? (incompetencia, prescripción, litispendencia, etc.)',
+      '3. ¿Qué medios de prueba presentarás? (documentos, testigos, peritos)',
+      '4. ¿Hay reconvención o contrademanda?',
+      '5. Nombre completo, DNI y domicilio procesal del cliente (Casilla CAL si tiene)',
+    ],
+    apelacion: [
+      '1. ¿Qué parte de la resolución impugnas y por qué es incorrecta?',
+      '2. ¿Cuál es el agravio principal que causa la resolución a tu cliente?',
+      '3. ¿Qué pides específicamente al órgano superior?',
+      '4. ¿Hay nuevos medios probatorios para ofrecer en segunda instancia?',
+      '5. Nombre completo, DNI y domicilio procesal del apelante',
+    ],
+    impulso: [
+      '1. ¿Qué acto procesal específico quieres impulsar?',
+      '2. ¿Cuánto tiempo lleva el expediente sin movimiento?',
+      '3. ¿Cuál es la última resolución o decreto emitido?',
+      '4. ¿Hay algún plazo procesal en riesgo de vencer?',
+      '5. Nombre completo, DNI y domicilio procesal del solicitante',
+    ],
+    generico: [
+      '1. ¿Cuál es el objeto del escrito y qué pides al juzgado?',
+      '2. ¿Cuáles son los hechos principales que sustentan tu pedido?',
+      '3. ¿Qué base legal respalda tu solicitud?',
+      '4. ¿Adjuntas documentos como anexos?',
+      '5. Nombre completo, DNI y domicilio procesal del solicitante',
+    ],
+  }
+
+  const tipoLower = tipo.toLowerCase().replace('contestación', 'contestacion').replace('apelación', 'apelacion')
+  const tipoNormalizado = tipoLower.includes('contest')
+    ? 'contestacion'
+    : tipoLower.includes('apel')
+      ? 'apelacion'
+      : tipoLower.includes('impuls')
+        ? 'impulso'
+        : 'generico'
+
+  const preguntas = PREGUNTAS_POR_TIPO[tipoNormalizado] || PREGUNTAS_POR_TIPO.generico
+
+  const esprimerMensaje = !Array.isArray(historialChat) || historialChat.length === 0
+
+  const systemPrompt = `Eres Arthur-IA, asistente legal especializado en 
+redacción de escritos judiciales para el Poder Judicial del Perú.
+
+${ESTILO_REDACCION}
 
 Contexto del proceso:
 - Expediente: ${casoData.numero_expediente}
-- Tipo: ${casoData.tipo_proceso}
-- Juzgado: ${casoData.organo_jurisdiccional}
-- Partes: ${casoData.partes}
-- Tipo de escrito: ${tipo}
-- Instrucciones del abogado: ${instrucciones || 'Sin instrucciones adicionales'}
+- Tipo de proceso: ${casoData.tipo_proceso}
+- Juzgado: ${casoData.organo_jurisdiccional || '[por determinar]'}
+- Partes: ${casoData.partes || '[por determinar]'}
+- Alias del caso: ${casoData.alias ?? ''}
+- Tipo de escrito a redactar: ${tipo}
 
-REGLAS:
-1. Una pregunta a la vez
-2. Cuando tengas suficiente información, genera el escrito completo
-3. Usa terminología procesal civil peruana correcta
-4. Cita el Código Procesal Civil (CPC) cuando corresponda
-5. Estructura: encabezado → hechos → derecho → petitorio → otrosíes
-6. Usa [CAMPO] para datos que aún necesitas
-7. Siempre incluir disclaimer de revisión profesional`
+${esprimerMensaje ? `
+INSTRUCCIÓN PARA ESTE PRIMER MENSAJE:
+Preséntate brevemente (1 oración) y haz exactamente estas 5 preguntas 
+en un solo mensaje, tal como están escritas:
+
+${preguntas.join('\n')}
+
+No hagas más preguntas. No expliques nada más. Espera las respuestas.
+` : `
+INSTRUCCIÓN PARA ESTE MENSAJE:
+El usuario ya respondió las preguntas iniciales. 
+Genera el documento COMPLETO ahora usando el formato de estilo indicado.
+Usa [CAMPO] solo para datos genuinamente desconocidos.
+El documento debe estar listo para presentar con ediciones mínimas.
+Si el documento está completo, termina con la línea:
+"---DOCUMENTO_COMPLETO---"
+`}
+`
 
   const judicialClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const messages =
@@ -353,12 +492,13 @@ REGLAS:
 
   const block = response.content[0]
   const text = block.type === 'text' ? block.text : ''
-  const isComplete = text.includes('SEÑOR JUEZ') || text.includes('POR TANTO')
-  const hasFields = text.includes('[')
+  const DOCUMENTO_COMPLETO_MARKER = '---DOCUMENTO_COMPLETO---'
+  const isComplete = text.includes(DOCUMENTO_COMPLETO_MARKER)
+  const cleanedText = text.replace(DOCUMENTO_COMPLETO_MARKER, '').trim()
 
   return {
-    message: text,
-    documentContent: isComplete ? text : '',
-    isComplete: isComplete && !hasFields
+    message: cleanedText,
+    documentContent: isComplete ? cleanedText : '',
+    isComplete,
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, use } from 'react';
 import Link from 'next/link';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -158,6 +159,32 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
         </div>
       </div>
     );
+  }
+
+  const casoAlias = tramite.alias;
+
+  async function downloadWord() {
+    const lines = documentContent.split('\n');
+    const doc = new Document({
+      sections: [{
+        children: lines.map(line =>
+          new Paragraph({
+            children: [new TextRun({
+              text: line,
+              font: 'Times New Roman',
+              size: 24,
+            })],
+          }),
+        ),
+      }],
+    });
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `escrito-${casoAlias}-${new Date().toISOString().split('T')[0]}.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -365,6 +392,25 @@ export default function RedactarPage({ params }: { params: Promise<{ id: string 
                 Guardado · {savedTime}
               </span>
             )}
+            <button
+              type="button"
+              onClick={() => void downloadWord()}
+              disabled={!documentContent}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--line-strong)',
+                borderRadius: 0,
+                padding: '8px 16px',
+                fontFamily: 'DM Mono, monospace',
+                fontSize: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                cursor: documentContent ? 'pointer' : 'not-allowed',
+                color: documentContent ? 'var(--ink)' : 'var(--muted)',
+              }}
+            >
+              Descargar Word
+            </button>
             <button
               onClick={copyDocument}
               disabled={!documentContent}
