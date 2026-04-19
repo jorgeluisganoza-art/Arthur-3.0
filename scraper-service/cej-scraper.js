@@ -266,6 +266,7 @@ async function hasPerfdriveChallengeIframe(page) {
 function makeBrowserArgs() {
     return [
         '--no-sandbox',
+        '--ignore-certificate-errors',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-blink-features=AutomationControlled',
