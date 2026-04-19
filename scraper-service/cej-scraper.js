@@ -283,6 +283,7 @@ function cejChromiumLaunchOptions() {
         devtools: debug,
         executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined,
         proxy: process.env.PROXY_URL ? parseProxy(process.env.PROXY_URL) : undefined,
+        ignoreHTTPSErrors: true,
         args: makeBrowserArgs(),
     };
 }
