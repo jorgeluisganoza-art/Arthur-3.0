@@ -837,23 +837,29 @@ async function fillAndScrape(page, numeroExpediente, baseResult, parte) {
             const navPromise = page.waitForNavigation({ waitUntil: 'load', timeout: 45000 }).catch(() => null);
             await page.click('#consultarExpedientes').catch(async () => {
                 // Fallback: call the CEJ JS function so their AJAX validation runs.
-                await page.evaluate((code) => {
+                await page.evaluate((captchaValue) => {
+                    const form = document.querySelector('form');
+                    if (!form)
+                        return;
+                    let input = document.querySelector('#codigoCaptcha');
+                    if (!input || !form.contains(input)) {
+                        input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'codigoCaptcha';
+                        input.id = 'codigoCaptcha';
+                        form.appendChild(input);
+                    }
+                    input.value = captchaValue;
+                }, captchaCode);
+                await page.evaluate(() => {
                     const win = window;
                     const fn = win['consultarExpedientes'];
-                    // Ensure captcha is present for the submit path too
                     const form = document.getElementById('busquedaPorCodigo');
-                    if (form && !form.querySelector('input[name="codigoCaptcha"]')) {
-                        const hidden = document.createElement('input');
-                        hidden.type = 'hidden';
-                        hidden.name = 'codigoCaptcha';
-                        hidden.value = code;
-                        form.appendChild(hidden);
-                    }
                     if (typeof fn === 'function')
                         fn();
                     else
                         form?.submit();
-                }, captchaCode);
+                });
             });
             const ajaxResp = await ajaxRespPromise;
             if (ajaxResp) {
