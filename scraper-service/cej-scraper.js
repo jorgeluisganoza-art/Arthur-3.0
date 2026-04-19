@@ -1100,6 +1100,7 @@ async function tryDirectAccess(numeroExpediente, baseResult, parte) {
         applyCejStealthOnce();
         browser = await playwright_extra_1.chromium.launch(cejChromiumLaunchOptions());
         const context = await browser.newContext({
+            ignoreHTTPSErrors: true,
             userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             viewport: { width: 1280, height: 800 },
             locale: 'es-PE',
@@ -1201,6 +1202,7 @@ async function _scrapeCEJ(numeroExpediente, maxRetries, parte) {
             applyCejStealthOnce();
             browser = await playwright_extra_1.chromium.launch(cejChromiumLaunchOptions());
             const context = await browser.newContext({
+                ignoreHTTPSErrors: true,
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 viewport: { width: 1280, height: 800 },
                 locale: 'es-PE',
