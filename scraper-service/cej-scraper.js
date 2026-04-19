@@ -10,6 +10,14 @@ const _2captcha_ts_1 = require("2captcha-ts");
 const crypto_1 = __importDefault(require("crypto"));
 const fs_1 = __importDefault(require("fs"));
 const supabase_storage_1 = require("./supabase-storage");
+function parseProxy(proxyUrl) {
+    const url = new URL(proxyUrl);
+    return {
+        server: url.protocol + '//' + url.hostname + ':' + url.port,
+        username: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password),
+    };
+}
 /** Aplicar stealth solo al abrir el navegador (evita fallos al importar el módulo en Next/API). */
 let cejStealthApplied = false;
 function applyCejStealthOnce() {
@@ -274,6 +282,7 @@ function cejChromiumLaunchOptions() {
         headless: !debug,
         devtools: debug,
         executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined,
+        proxy: process.env.PROXY_URL ? parseProxy(process.env.PROXY_URL) : undefined,
         args: makeBrowserArgs(),
     };
 }
