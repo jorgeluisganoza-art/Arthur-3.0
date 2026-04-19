@@ -29,33 +29,35 @@ app.post('/scrape', async (req, res) => {
 })
 
 app.get('/health/proxy', async (req, res) => {
-  const { chromium } = require('playwright')
+  const { chromium } = require('playwright-extra');
   function parseProxy(proxyUrl) {
-    const url = new URL(proxyUrl)
+    const url = new URL(proxyUrl);
     return {
       server: url.protocol + '//' + url.hostname + ':' + url.port,
       username: decodeURIComponent(url.username),
       password: decodeURIComponent(url.password),
-    }
+    };
   }
-  let browser
+  let browser;
   try {
     browser = await chromium.launch({
       headless: true,
       proxy: parseProxy(process.env.PROXY_URL),
-      args: ['--no-sandbox'],
-    })
-    const page = await browser.newPage()
-    await page.goto('https://api.ipify.org?format=json')
-    const body = await page.textContent('body')
-    const ip = JSON.parse(body).ip
-    res.json({ ok: true, ip })
+      args: ['--no-sandbox', '--ignore-certificate-errors']
+    });
+    const page = await browser.newPage();
+    await page.goto('http://checkip.amazonaws.com/', {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000
+    });
+    const ip = (await page.textContent('body')).trim();
+    res.json({ ok: true, ip });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message })
+    res.status(500).json({ ok: false, error: err.message });
   } finally {
-    if (browser) await browser.close()
+    if (browser) await browser.close();
   }
-})
+});
 
 const PORT = Number(process.env.PORT) || 3001
 app.listen(PORT, () => {
