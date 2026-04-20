@@ -91,7 +91,6 @@ class CapSolverImageSolver {
                 task: {
                     type: 'ImageToTextTask',
                     module: 'common',
-                    websiteURL: CEJ_SEARCH_URL,
                     body: imageBase64,
                 },
             }),
