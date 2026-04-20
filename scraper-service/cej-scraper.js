@@ -183,7 +183,16 @@ async function solveImageCaptchaFromDom(page, baseResult) {
     }, { timeout: 10000 }).catch(() => { });
     await imgEl.scrollIntoViewIfNeeded().catch(() => { });
     await page.waitForTimeout(250);
-    const imgBuffer = await imgEl.screenshot({ type: 'jpeg', quality: 80 }).catch(() => Buffer.alloc(0));
+    // Obtener src de la imagen
+    const imgSrc = await page.evaluate(() => {
+        const img = document.getElementById('captcha_image');
+        return img?.src || '';
+    });
+    if (!imgSrc)
+        return '';
+    // Descargar imagen via page.request para reusar sesión
+    const response = await page.request.get(imgSrc);
+    const imgBuffer = Buffer.from(await response.body());
     if (!imgBuffer.length || imgBuffer.length < 200)
         return '';
     const solver = getImageCaptchaSolver();
