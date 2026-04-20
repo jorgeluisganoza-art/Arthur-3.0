@@ -847,6 +847,36 @@ async function fillAndScrape(page, numeroExpediente, baseResult, parte) {
                     captchaEl.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             }, captchaCode);
+            // Verificar que el captcha se inyectó correctamente
+            const captchaValueBefore = await page.evaluate(() => {
+                const el = document.querySelector('#codigoCaptcha');
+                return el ? el.value : 'NOT_FOUND';
+            });
+            console.log('[CEJ][DEBUG] Captcha value in DOM before submit:', captchaValueBefore);
+            // Verificar que el captcha está dentro del form
+            const captchaInForm = await page.evaluate(() => {
+                const form = document.querySelector('form');
+                const captchaInput = form ? form.querySelector('#codigoCaptcha') : null;
+                return {
+                    formFound: !!form,
+                    captchaInsideForm: !!captchaInput,
+                    captchaValue: captchaInput ? captchaInput.value : null
+                };
+            });
+            console.log('[CEJ][DEBUG] Captcha form check:', JSON.stringify(captchaInForm));
+            // Verificar cookies actuales
+            const cookies = await page.context().cookies();
+            console.log('[CEJ][DEBUG] Cookies count:', cookies.length);
+            console.log('[CEJ][DEBUG] Cookie names:', cookies.map(c => c.name).join(', '));
+            // Capturar IP actual ANTES del submit
+            try {
+                const ipCheck = await page.request.get('http://checkip.amazonaws.com/');
+                const ip = (await ipCheck.text()).trim();
+                console.log('[CEJ][DEBUG] IP before submit:', ip);
+            }
+            catch (e) {
+                console.log('[CEJ][DEBUG] IP check failed:', e.message);
+            }
             await page.fill('input[placeholder*="APELLIDO"], input[name="parte"], #parte', parte).catch(() => page.evaluate((p) => {
                 const parteEl = document.getElementById('parte');
                 if (parteEl) {
