@@ -1108,7 +1108,7 @@ async function tryDirectAccess(numeroExpediente, baseResult, parte) {
         const context = await browser.newContext({
             ignoreHTTPSErrors: true,
             userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            viewport: { width: 1280, height: 800 },
+            viewport: { width: 1280, height: 720 },
             locale: 'es-PE',
         });
         console.log(`[CEJ] Direct access attempt: ${CEJ_SEARCH_URL}`);
@@ -1210,7 +1210,7 @@ async function _scrapeCEJ(numeroExpediente, maxRetries, parte) {
             const context = await browser.newContext({
                 ignoreHTTPSErrors: true,
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                viewport: { width: 1280, height: 800 },
+                viewport: { width: 1280, height: 720 },
                 locale: 'es-PE',
             });
             const page = await context.newPage();
