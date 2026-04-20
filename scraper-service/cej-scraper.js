@@ -83,23 +83,28 @@ class CapSolverImageSolver {
     async solve(imageBase64) {
         if (!this.apiKey)
             throw new Error('CAPSOLVER_API_KEY not set');
+        const payload = {
+            clientKey: this.apiKey,
+            task: {
+                type: 'ImageToTextTask',
+                module: 'common',
+                body: imageBase64,
+            },
+        };
+        console.log('[CEJ][CapSolver] API key length:', process.env.CAPSOLVER_API_KEY ? process.env.CAPSOLVER_API_KEY.length : 'UNDEFINED');
+        console.log('[CEJ][CapSolver] API key first 4:', process.env.CAPSOLVER_API_KEY ? process.env.CAPSOLVER_API_KEY.slice(0, 4) : 'UNDEFINED');
+        console.log('[CEJ][CapSolver] Payload:', JSON.stringify(payload, null, 2));
         const create = await fetch('https://api.capsolver.com/createTask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                clientKey: this.apiKey,
-                task: {
-                    type: 'ImageToTextTask',
-                    module: 'common',
-                    body: imageBase64,
-                },
-            }),
+            body: JSON.stringify(payload),
         }).then(r => r.json());
         // ImageToText may return sync solution in createTask response (status=ready)
         const maybeSolution = create.solution?.text;
         if (maybeSolution && String(maybeSolution).trim())
             return String(maybeSolution).trim();
         if (create.errorId !== 0 || !create.taskId) {
+            console.log('[CEJ][CapSolver] Full error response:', JSON.stringify(create, null, 2));
             throw new Error(`CapSolver createTask failed: ${create.errorCode || 'unknown'}`);
         }
         const taskId = create.taskId;
@@ -213,16 +218,21 @@ async function solveHCaptchaWithCapSolver(sitekey, url) {
     console.log('[CEJ] Using captcha solver: CapSolver (HTTP API)');
     try {
         // Create task
+        const payload = {
+            clientKey: apiKey,
+            task: { type: 'HCaptchaTaskProxyless', websiteURL: url, websiteKey: sitekey },
+        };
+        console.log('[CEJ][CapSolver] API key length:', process.env.CAPSOLVER_API_KEY ? process.env.CAPSOLVER_API_KEY.length : 'UNDEFINED');
+        console.log('[CEJ][CapSolver] API key first 4:', process.env.CAPSOLVER_API_KEY ? process.env.CAPSOLVER_API_KEY.slice(0, 4) : 'UNDEFINED');
+        console.log('[CEJ][CapSolver] Payload:', JSON.stringify(payload, null, 2));
         const createRes = await fetch('https://api.capsolver.com/createTask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                clientKey: apiKey,
-                task: { type: 'HCaptchaTaskProxyless', websiteURL: url, websiteKey: sitekey },
-            }),
+            body: JSON.stringify(payload),
         });
         const createData = await createRes.json();
         if (createData.errorId !== 0) {
+            console.log('[CEJ][CapSolver] Full error response:', JSON.stringify(createData, null, 2));
             console.error('[CEJ] CapSolver createTask error:', createData.errorDescription);
             return null;
         }
