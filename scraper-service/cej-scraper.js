@@ -193,6 +193,9 @@ async function solveImageCaptchaFromDom(page, baseResult) {
     // Descargar imagen via page.request para reusar sesión
     const response = await page.request.get(imgSrc);
     const imgBuffer = Buffer.from(await response.body());
+    console.log('[CEJ] Captcha img src:', imgSrc);
+    console.log('[CEJ] Captcha buffer size:', imgBuffer.length);
+    console.log('[CEJ] Captcha buffer hex preview:', imgBuffer.slice(0, 8).toString('hex'));
     if (!imgBuffer.length || imgBuffer.length < 200)
         return '';
     const solver = getImageCaptchaSolver();
