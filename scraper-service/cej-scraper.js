@@ -83,31 +83,32 @@ class CapSolverImageSolver {
     async solve(imageBase64) {
         if (!this.apiKey)
             throw new Error('CAPSOLVER_API_KEY not set');
+        const imgBuffer = Buffer.from(imageBase64, 'base64');
         const payload = {
-            clientKey: this.apiKey,
+            clientKey: process.env.CAPSOLVER_API_KEY,
             task: {
-                type: 'ImageToTextTask',
-                module: 'common',
-                body: imageBase64,
+                type: "ImageToTextTask",
+                body: imgBuffer.toString('base64')
             },
         };
         console.log('[CEJ][CapSolver] API key length:', process.env.CAPSOLVER_API_KEY ? process.env.CAPSOLVER_API_KEY.length : 'UNDEFINED');
         console.log('[CEJ][CapSolver] API key first 4:', process.env.CAPSOLVER_API_KEY ? process.env.CAPSOLVER_API_KEY.slice(0, 4) : 'UNDEFINED');
         console.log('[CEJ][CapSolver] Payload:', JSON.stringify(payload, null, 2));
-        const create = await fetch('https://api.capsolver.com/createTask', {
+        const createTaskResponse = await fetch('https://api.capsolver.com/createTask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         }).then(r => r.json());
+        console.log('[CEJ][CapSolver] createTask response:', JSON.stringify(createTaskResponse, null, 2));
         // ImageToText may return sync solution in createTask response (status=ready)
-        const maybeSolution = create.solution?.text;
+        const maybeSolution = createTaskResponse.solution?.text;
         if (maybeSolution && String(maybeSolution).trim())
             return String(maybeSolution).trim();
-        if (create.errorId !== 0 || !create.taskId) {
-            console.log('[CEJ][CapSolver] Full error response:', JSON.stringify(create, null, 2));
-            throw new Error(`CapSolver createTask failed: ${create.errorCode || 'unknown'}`);
+        if (createTaskResponse.errorId !== 0 || !createTaskResponse.taskId) {
+            console.log('[CEJ][CapSolver] Full error response:', JSON.stringify(createTaskResponse, null, 2));
+            throw new Error(`CapSolver createTask failed: ${createTaskResponse.errorCode || 'unknown'}`);
         }
-        const taskId = create.taskId;
+        const taskId = createTaskResponse.taskId;
         const started = Date.now();
         while (Date.now() - started < this.opts.timeoutMs) {
             await new Promise(r => setTimeout(r, this.opts.pollMs));
