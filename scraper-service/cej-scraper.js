@@ -911,7 +911,7 @@ async function fillAndScrape(page, numeroExpediente, baseResult, parte) {
     console.log('[CEJ] Trying Tab 1 (Por filtros)...');
     try {
         // Navigate back to search page to try Tab 1
-        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000 });
+        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000, ignoreHTTPSErrors: true });
         await page.waitForTimeout(2000);
         await page.click('a[href="#tabs-1"], a:has-text("Por filtros")').catch(() => { });
         await page.waitForTimeout(500);
@@ -1323,10 +1323,11 @@ async function tryDirectAccess(numeroExpediente, baseResult, parte) {
             userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             viewport: { width: 1280, height: 800 },
             locale: 'es-PE',
+            ignoreHTTPSErrors: true,
         });
         console.log(`[CEJ] Direct access attempt: ${CEJ_SEARCH_URL}`);
         const page = await context.newPage();
-        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000 });
+        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000, ignoreHTTPSErrors: true });
         await page.waitForTimeout(3000);
         let currentUrl = page.url();
         let title = await page.title();
@@ -1341,7 +1342,7 @@ async function tryDirectAccess(numeroExpediente, baseResult, parte) {
             return result;
         }
         console.log('[CEJ] Search URL blocked — trying detail URL for session warm-up');
-        await page.goto(CEJ_DETAIL_URL, { waitUntil: 'load', timeout: 30000 });
+        await page.goto(CEJ_DETAIL_URL, { waitUntil: 'load', timeout: 30000, ignoreHTTPSErrors: true });
         await page.waitForTimeout(3000);
         currentUrl = page.url();
         title = await page.title();
@@ -1352,7 +1353,7 @@ async function tryDirectAccess(numeroExpediente, baseResult, parte) {
             return null;
         }
         console.log('[CEJ] Detail URL passed — retrying search URL with established session');
-        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000 });
+        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000, ignoreHTTPSErrors: true });
         await page.waitForTimeout(3000);
         currentUrl = page.url();
         title = await page.title();
@@ -1424,10 +1425,11 @@ async function _scrapeCEJ(numeroExpediente, maxRetries, parte) {
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 viewport: { width: 1280, height: 800 },
                 locale: 'es-PE',
+                ignoreHTTPSErrors: true,
             });
             const page = await context.newPage();
             console.log('[CEJ] Navigating to portal...');
-            await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000 });
+            await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000, ignoreHTTPSErrors: true });
             if (await hasPerfdriveChallengeIframe(page)) {
                 console.log('[CEJ] Radware Bot Manager detected (perfdrive iframe) — solving hCaptcha...');
                 baseResult.captchaDetected = true;
