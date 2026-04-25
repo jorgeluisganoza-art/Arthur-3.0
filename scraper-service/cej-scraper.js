@@ -83,32 +83,27 @@ class CapSolverImageSolver {
     async solve(imageBase64) {
         if (!this.apiKey)
             throw new Error('CAPSOLVER_API_KEY not set');
-        const imgBuffer = Buffer.from(imageBase64, 'base64');
-        const payload = {
-            clientKey: process.env.CAPSOLVER_API_KEY,
-            task: {
-                type: "ImageToTextTask",
-                body: imgBuffer.toString('base64')
-            },
-        };
-        console.log('[CEJ][CapSolver] API key length:', process.env.CAPSOLVER_API_KEY ? process.env.CAPSOLVER_API_KEY.length : 'UNDEFINED');
-        console.log('[CEJ][CapSolver] API key first 4:', process.env.CAPSOLVER_API_KEY ? process.env.CAPSOLVER_API_KEY.slice(0, 4) : 'UNDEFINED');
-        console.log('[CEJ][CapSolver] Payload:', JSON.stringify(payload, null, 2));
-        const createTaskResponse = await fetch('https://api.capsolver.com/createTask', {
+        const create = await fetch('https://api.capsolver.com/createTask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+                clientKey: this.apiKey,
+                task: {
+                    type: 'ImageToTextTask',
+                    module: 'common',
+                    websiteURL: CEJ_SEARCH_URL,
+                    body: imageBase64,
+                },
+            }),
         }).then(r => r.json());
-        console.log('[CEJ][CapSolver] createTask response:', JSON.stringify(createTaskResponse, null, 2));
         // ImageToText may return sync solution in createTask response (status=ready)
-        const maybeSolution = createTaskResponse.solution?.text;
+        const maybeSolution = create.solution?.text;
         if (maybeSolution && String(maybeSolution).trim())
             return String(maybeSolution).trim();
-        if (createTaskResponse.errorId !== 0 || !createTaskResponse.taskId) {
-            console.log('[CEJ][CapSolver] Full error response:', JSON.stringify(createTaskResponse, null, 2));
-            throw new Error(`CapSolver createTask failed: ${createTaskResponse.errorCode || 'unknown'}`);
+        if (create.errorId !== 0 || !create.taskId) {
+            throw new Error(`CapSolver createTask failed: ${create.errorCode || 'unknown'}`);
         }
-        const taskId = createTaskResponse.taskId;
+        const taskId = create.taskId;
         const started = Date.now();
         while (Date.now() - started < this.opts.timeoutMs) {
             await new Promise(r => setTimeout(r, this.opts.pollMs));
@@ -189,19 +184,7 @@ async function solveImageCaptchaFromDom(page, baseResult) {
     }, { timeout: 10000 }).catch(() => { });
     await imgEl.scrollIntoViewIfNeeded().catch(() => { });
     await page.waitForTimeout(250);
-    // Obtener src de la imagen
-    const imgSrc = await page.evaluate(() => {
-        const img = document.getElementById('captcha_image');
-        return img?.src || '';
-    });
-    if (!imgSrc)
-        return '';
-    // Descargar imagen via page.request para reusar sesión
-    const response = await page.request.get(imgSrc);
-    const imgBuffer = Buffer.from(await response.body());
-    console.log('[CEJ] Captcha img src:', imgSrc);
-    console.log('[CEJ] Captcha buffer size:', imgBuffer.length);
-    console.log('[CEJ] Captcha buffer hex preview:', imgBuffer.slice(0, 8).toString('hex'));
+    const imgBuffer = await imgEl.screenshot({ type: 'jpeg', quality: 80 }).catch(() => Buffer.alloc(0));
     if (!imgBuffer.length || imgBuffer.length < 200)
         return '';
     const solver = getImageCaptchaSolver();
@@ -219,21 +202,16 @@ async function solveHCaptchaWithCapSolver(sitekey, url) {
     console.log('[CEJ] Using captcha solver: CapSolver (HTTP API)');
     try {
         // Create task
-        const payload = {
-            clientKey: apiKey,
-            task: { type: 'HCaptchaTaskProxyless', websiteURL: url, websiteKey: sitekey },
-        };
-        console.log('[CEJ][CapSolver] API key length:', process.env.CAPSOLVER_API_KEY ? process.env.CAPSOLVER_API_KEY.length : 'UNDEFINED');
-        console.log('[CEJ][CapSolver] API key first 4:', process.env.CAPSOLVER_API_KEY ? process.env.CAPSOLVER_API_KEY.slice(0, 4) : 'UNDEFINED');
-        console.log('[CEJ][CapSolver] Payload:', JSON.stringify(payload, null, 2));
         const createRes = await fetch('https://api.capsolver.com/createTask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+                clientKey: apiKey,
+                task: { type: 'HCaptchaTaskProxyless', websiteURL: url, websiteKey: sitekey },
+            }),
         });
         const createData = await createRes.json();
         if (createData.errorId !== 0) {
-            console.log('[CEJ][CapSolver] Full error response:', JSON.stringify(createData, null, 2));
             console.error('[CEJ] CapSolver createTask error:', createData.errorDescription);
             return null;
         }
@@ -286,13 +264,30 @@ async function hasPerfdriveChallengeIframe(page) {
     }).catch(() => false);
 }
 function makeBrowserArgs() {
-    return [
+    const existing = [
         '--no-sandbox',
-        '--ignore-certificate-errors',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-blink-features=AutomationControlled',
     ];
+    const requiredForRailway = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+    ];
+    const seen = new Set();
+    const out = [];
+    for (const a of [...existing, ...requiredForRailway]) {
+        if (seen.has(a))
+            continue;
+        seen.add(a);
+        out.push(a);
+    }
+    return out;
 }
 /** CEJ_DEBUG=1 o true → navegador visible + DevTools (equivalente práctico a debug: true, headless: false). */
 function isCejBrowserDebug() {
@@ -302,11 +297,10 @@ function isCejBrowserDebug() {
 function cejChromiumLaunchOptions() {
     const debug = isCejBrowserDebug();
     return {
-        headless: !debug,
+        headless: true,
         devtools: debug,
         executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined,
         proxy: process.env.PROXY_URL ? parseProxy(process.env.PROXY_URL) : undefined,
-        ignoreHTTPSErrors: true,
         args: makeBrowserArgs(),
     };
 }
@@ -847,36 +841,6 @@ async function fillAndScrape(page, numeroExpediente, baseResult, parte) {
                     captchaEl.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             }, captchaCode);
-            // Verificar que el captcha se inyectó correctamente
-            const captchaValueBefore = await page.evaluate(() => {
-                const el = document.querySelector('#codigoCaptcha');
-                return el ? el.value : 'NOT_FOUND';
-            });
-            console.log('[CEJ][DEBUG] Captcha value in DOM before submit:', captchaValueBefore);
-            // Verificar que el captcha está dentro del form
-            const captchaInForm = await page.evaluate(() => {
-                const form = document.querySelector('form');
-                const captchaInput = form ? form.querySelector('#codigoCaptcha') : null;
-                return {
-                    formFound: !!form,
-                    captchaInsideForm: !!captchaInput,
-                    captchaValue: captchaInput ? captchaInput.value : null
-                };
-            });
-            console.log('[CEJ][DEBUG] Captcha form check:', JSON.stringify(captchaInForm));
-            // Verificar cookies actuales
-            const cookies = await page.context().cookies();
-            console.log('[CEJ][DEBUG] Cookies count:', cookies.length);
-            console.log('[CEJ][DEBUG] Cookie names:', cookies.map(c => c.name).join(', '));
-            // Capturar IP actual ANTES del submit
-            try {
-                const ipCheck = await page.request.get('http://checkip.amazonaws.com/');
-                const ip = (await ipCheck.text()).trim();
-                console.log('[CEJ][DEBUG] IP before submit:', ip);
-            }
-            catch (e) {
-                console.log('[CEJ][DEBUG] IP check failed:', e.message);
-            }
             await page.fill('input[placeholder*="APELLIDO"], input[name="parte"], #parte', parte).catch(() => page.evaluate((p) => {
                 const parteEl = document.getElementById('parte');
                 if (parteEl) {
@@ -889,29 +853,23 @@ async function fillAndScrape(page, numeroExpediente, baseResult, parte) {
             const navPromise = page.waitForNavigation({ waitUntil: 'load', timeout: 45000 }).catch(() => null);
             await page.click('#consultarExpedientes').catch(async () => {
                 // Fallback: call the CEJ JS function so their AJAX validation runs.
-                await page.evaluate((captchaValue) => {
-                    const form = document.querySelector('form');
-                    if (!form)
-                        return;
-                    let input = document.querySelector('#codigoCaptcha');
-                    if (!input || !form.contains(input)) {
-                        input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = 'codigoCaptcha';
-                        input.id = 'codigoCaptcha';
-                        form.appendChild(input);
-                    }
-                    input.value = captchaValue;
-                }, captchaCode);
-                await page.evaluate(() => {
+                await page.evaluate((code) => {
                     const win = window;
                     const fn = win['consultarExpedientes'];
+                    // Ensure captcha is present for the submit path too
                     const form = document.getElementById('busquedaPorCodigo');
+                    if (form && !form.querySelector('input[name="codigoCaptcha"]')) {
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'codigoCaptcha';
+                        hidden.value = code;
+                        form.appendChild(hidden);
+                    }
                     if (typeof fn === 'function')
                         fn();
                     else
                         form?.submit();
-                });
+                }, captchaCode);
             });
             const ajaxResp = await ajaxRespPromise;
             if (ajaxResp) {
@@ -953,7 +911,7 @@ async function fillAndScrape(page, numeroExpediente, baseResult, parte) {
     console.log('[CEJ] Trying Tab 1 (Por filtros)...');
     try {
         // Navigate back to search page to try Tab 1
-        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 90000 });
+        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000 });
         await page.waitForTimeout(2000);
         await page.click('a[href="#tabs-1"], a:has-text("Por filtros")').catch(() => { });
         await page.waitForTimeout(500);
@@ -1097,20 +1055,223 @@ async function fillAndScrape(page, numeroExpediente, baseResult, parte) {
             return el?.value || '(empty)';
         }).catch(() => '(error)');
         console.log('[CEJ] parte in DOM before Tab1 click:', tab1ParteInDom);
+        const cejDebugDiag = process.env.CEJ_DEBUG === 'true';
+        let __cejDiagRequestHandler = null;
+        let __cejDiagResponseHandler = null;
+        if (cejDebugDiag) {
+            // 1) BEFORE SUBMIT — capture DOM state
+            const before = await page.evaluate(() => {
+                const captchaEl = document.querySelector('#codigoCaptcha');
+                const captchaVal = captchaEl && 'value' in captchaEl ? String(captchaEl.value || '') : '';
+                const viewStateEl = document.querySelector('input[name="javax.faces.ViewState"], input[id*="javax.faces.ViewState"], input[name*="ViewState"]');
+                const viewStateVal = viewStateEl && 'value' in viewStateEl ? String(viewStateEl.value || '') : '';
+                const btn = document.querySelector('#consultarExpedientes') ||
+                    document.querySelector('button[type="submit"], input[type="submit"]');
+                const form = btn ? btn.closest('form') : document.querySelector('form');
+                const hidden = form
+                    ? Array.from(form.querySelectorAll('input[type="hidden"]')).map((i) => ({
+                        id: i.id || '',
+                        name: i.name || '',
+                        value: i.value || '',
+                    }))
+                    : [];
+                const action = form ? (form.getAttribute('action') || '') : '';
+                const tagName = btn ? btn.tagName : '';
+                const id = btn ? (btn.id || '') : '';
+                const name = btn ? (btn.getAttribute('name') || '') : '';
+                const type = btn ? (btn.getAttribute('type') || '') : '';
+                const onclick = btn ? (btn.getAttribute('onclick') || '') : '';
+                const value = btn ? (btn.getAttribute('value') || btn.textContent || '') : '';
+                return {
+                    captchaVal,
+                    viewStateVal,
+                    action,
+                    button: { tagName, id, name, type, onclick, value },
+                    hidden,
+                };
+            }).catch(() => ({
+                captchaVal: '',
+                viewStateVal: '',
+                action: '',
+                button: { tagName: '', id: '', name: '', type: '', onclick: '', value: '' },
+                hidden: [],
+            }));
+            console.log('[CEJ][DIAG] captcha field value:', before.captchaVal);
+            if (!before.captchaVal) {
+                console.log('[CEJ][DIAG] captcha field EMPTY or NOT FOUND');
+            }
+            if (before.viewStateVal) {
+                console.log('[CEJ][DIAG] ViewState (first 40):', before.viewStateVal.substring(0, 40));
+            }
+            else {
+                console.log('[CEJ][DIAG] ViewState NOT FOUND');
+            }
+            console.log('[CEJ][DIAG] form action:', before.action || '(empty)');
+            console.log('[CEJ][DIAG] search button:', {
+                tagName: before.button.tagName,
+                id: before.button.id,
+                name: before.button.name,
+                type: before.button.type,
+                onclick: before.button.onclick,
+                value: String(before.button.value || '').trim().substring(0, 120),
+            });
+            if (String(before.button.onclick || '').includes('__doPostBack')) {
+                console.log('[CEJ][DIAG] JSF doPostBack detected');
+            }
+            console.log('[CEJ][DIAG] hidden inputs in form:', (before.hidden || []).map(h => ({
+                id: h.id,
+                name: h.name,
+                value: String(h.value || '').substring(0, 120),
+            })));
+            // 2) INTERCEPT NETWORK — same origin only
+            const host = (() => {
+                try {
+                    return new URL(page.url()).hostname;
+                }
+                catch {
+                    return '';
+                }
+            })();
+            __cejDiagRequestHandler = (req) => {
+                try {
+                    const u = new URL(req.url());
+                    if (host && u.hostname !== host)
+                        return;
+                    const body = req.postData() || '';
+                    const hasCaptcha = body.includes('codigoCaptcha');
+                    const hasViewState = body.includes('ViewState') || body.includes('javax.faces.ViewState');
+                    console.log('[CEJ][DIAG][REQ]', req.method(), req.url(), 'bodyHasCaptcha=', hasCaptcha, 'bodyHasViewState=', hasViewState);
+                }
+                catch { }
+            };
+            __cejDiagResponseHandler = (resp) => {
+                try {
+                    const u = new URL(resp.url());
+                    if (host && u.hostname !== host)
+                        return;
+                    console.log('[CEJ][DIAG][RESP]', resp.status(), resp.url());
+                }
+                catch { }
+            };
+            page.on('request', __cejDiagRequestHandler);
+            page.on('response', __cejDiagResponseHandler);
+        }
         // Intercept Tab 1 AJAX (ValidarFiltros.htm) to fail fast on errors
         const tab1AjaxReqPromise = page.waitForRequest(req => req.url().includes('ValidarFiltros') && !req.url().includes('ValidarFiltrosCodigo'), { timeout: 30000 }).catch(() => null);
         const tab1AjaxRespPromise = page.waitForResponse(resp => resp.url().includes('ValidarFiltros') && !resp.url().includes('ValidarFiltrosCodigo'), { timeout: 30000 }).catch(() => null);
         const navPromise1 = page.waitForNavigation({ waitUntil: 'load', timeout: 45000 }).catch(() => null);
-        await page.click('#consultarExpedientes').catch(async () => {
-            await page.evaluate(() => {
-                const win = window;
-                const fn = win['consultarExpedientes'];
-                if (typeof fn === 'function')
-                    fn();
-                else
-                    document.getElementById('busquedaFiltros')?.submit();
+        if (cejDebugDiag) {
+            // 3) EXECUTE SUBMIT — two strategies (diagnostic mode only)
+            const beforeUrl = page.url();
+            let navigated = false;
+            try {
+                const nav = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 8000 }).then(() => true).catch(() => false);
+                await page.click('#consultarExpedientes');
+                navigated = await nav;
+                console.log('[CEJ][DIAG] Strategy 1 click() navigated:', navigated);
+            }
+            catch (e) {
+                console.log('[CEJ][DIAG] Strategy 1 click() failed:', e instanceof Error ? e.message : String(e));
+            }
+            if (!navigated) {
+                try {
+                    const nav2 = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 8000 }).then(() => true).catch(() => false);
+                    await page.evaluate(() => {
+                        const btn = document.querySelector('#consultarExpedientes') ||
+                            document.querySelector('button[type="submit"], input[type="submit"]');
+                        const target = btn ? (btn.id || btn.getAttribute('name') || 'btnBuscar') : 'btnBuscar';
+                        if (typeof __doPostBack === 'function') {
+                            __doPostBack(target, '');
+                        }
+                    });
+                    navigated = await nav2;
+                    console.log('[CEJ][DIAG] Strategy 2 __doPostBack navigated:', navigated);
+                }
+                catch (e) {
+                    console.log('[CEJ][DIAG] Strategy 2 __doPostBack failed:', e instanceof Error ? e.message : String(e));
+                }
+            }
+            // 4) AFTER SUBMIT — capture state
+            const after = await page.evaluate(() => {
+                const title = document.title || '';
+                const grp = document.querySelector('#grpBusqueda');
+                const err = document.querySelector('div.error, .error, div.mensaje, .mensaje');
+                const res = document.querySelector('#dtaResult, #dtaResultado, #dtaResultados, [id*="dtaResult"]');
+                const grpText = grp ? (grp.textContent || '').trim() : '';
+                const errText = err ? (err.textContent || '').trim() : '';
+                return {
+                    title,
+                    grpText,
+                    errText,
+                    hasResultsPanel: !!res,
+                };
+            }).catch(() => ({ title: '', grpText: '', errText: '', hasResultsPanel: false }));
+            const afterUrl = page.url();
+            console.log('[CEJ][DIAG] URL after submit:', afterUrl);
+            if (afterUrl.includes('busquedaform')) {
+                console.log('[CEJ][DIAG] Still on busquedaform');
+            }
+            console.log('[CEJ][DIAG] document.title:', after.title);
+            if (after.grpText) {
+                console.log('[CEJ][DIAG] #grpBusqueda text:', after.grpText.substring(0, 600));
+            }
+            if (after.errText) {
+                console.log('[CEJ][DIAG] error/mensaje text:', after.errText.substring(0, 600));
+            }
+            if (after.hasResultsPanel) {
+                console.log('[CEJ][DIAG] Results panel found (dtaResult or similar)');
+            }
+            // 5) Screenshot (Railway only): /tmp/cej-post-submit-debug.png
+            const isRailway = !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
+            if (isRailway) {
+                try {
+                    if (fs_1.default.existsSync('/tmp')) {
+                        fs_1.default.accessSync('/tmp', fs_1.default.constants.W_OK);
+                        await page.screenshot({ path: '/tmp/cej-post-submit-debug.png', fullPage: true });
+                        console.log('[CEJ][DIAG] Saved screenshot: /tmp/cej-post-submit-debug.png');
+                    }
+                    else {
+                        console.log('[CEJ][DIAG] /tmp does not exist — screenshot skipped');
+                    }
+                }
+                catch (e) {
+                    console.log('[CEJ][DIAG] Screenshot failed:', e instanceof Error ? e.message : String(e));
+                }
+            }
+            else {
+                console.log('[CEJ][DIAG] Not running on Railway — screenshot skipped');
+            }
+            // Remove listeners after submit
+            if (__cejDiagRequestHandler)
+                page.off('request', __cejDiagRequestHandler);
+            if (__cejDiagResponseHandler)
+                page.off('response', __cejDiagResponseHandler);
+            // Ensure original flow still triggers if we stayed on the same page and no JSF nav happened
+            if (page.url() === beforeUrl) {
+                await page.click('#consultarExpedientes').catch(async () => {
+                    await page.evaluate(() => {
+                        const win = window;
+                        const fn = win['consultarExpedientes'];
+                        if (typeof fn === 'function')
+                            fn();
+                        else
+                            document.getElementById('busquedaFiltros')?.submit();
+                    });
+                });
+            }
+        }
+        else {
+            await page.click('#consultarExpedientes').catch(async () => {
+                await page.evaluate(() => {
+                    const win = window;
+                    const fn = win['consultarExpedientes'];
+                    if (typeof fn === 'function')
+                        fn();
+                    else
+                        document.getElementById('busquedaFiltros')?.submit();
+                });
             });
-        });
+        }
         // Log Tab 1 AJAX request body
         const tab1AjaxReq = await tab1AjaxReqPromise;
         if (tab1AjaxReq) {
@@ -1159,14 +1320,13 @@ async function tryDirectAccess(numeroExpediente, baseResult, parte) {
         applyCejStealthOnce();
         browser = await playwright_extra_1.chromium.launch(cejChromiumLaunchOptions());
         const context = await browser.newContext({
-            ignoreHTTPSErrors: true,
             userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            viewport: { width: 1280, height: 720 },
+            viewport: { width: 1280, height: 800 },
             locale: 'es-PE',
         });
         console.log(`[CEJ] Direct access attempt: ${CEJ_SEARCH_URL}`);
         const page = await context.newPage();
-        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 90000 });
+        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000 });
         await page.waitForTimeout(3000);
         let currentUrl = page.url();
         let title = await page.title();
@@ -1181,7 +1341,7 @@ async function tryDirectAccess(numeroExpediente, baseResult, parte) {
             return result;
         }
         console.log('[CEJ] Search URL blocked — trying detail URL for session warm-up');
-        await page.goto(CEJ_DETAIL_URL, { waitUntil: 'load', timeout: 90000 });
+        await page.goto(CEJ_DETAIL_URL, { waitUntil: 'load', timeout: 30000 });
         await page.waitForTimeout(3000);
         currentUrl = page.url();
         title = await page.title();
@@ -1192,7 +1352,7 @@ async function tryDirectAccess(numeroExpediente, baseResult, parte) {
             return null;
         }
         console.log('[CEJ] Detail URL passed — retrying search URL with established session');
-        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 90000 });
+        await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000 });
         await page.waitForTimeout(3000);
         currentUrl = page.url();
         title = await page.title();
@@ -1261,14 +1421,13 @@ async function _scrapeCEJ(numeroExpediente, maxRetries, parte) {
             applyCejStealthOnce();
             browser = await playwright_extra_1.chromium.launch(cejChromiumLaunchOptions());
             const context = await browser.newContext({
-                ignoreHTTPSErrors: true,
                 userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                viewport: { width: 1280, height: 720 },
+                viewport: { width: 1280, height: 800 },
                 locale: 'es-PE',
             });
             const page = await context.newPage();
             console.log('[CEJ] Navigating to portal...');
-            await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 90000 });
+            await page.goto(CEJ_SEARCH_URL, { waitUntil: 'load', timeout: 30000 });
             if (await hasPerfdriveChallengeIframe(page)) {
                 console.log('[CEJ] Radware Bot Manager detected (perfdrive iframe) — solving hCaptcha...');
                 baseResult.captchaDetected = true;
