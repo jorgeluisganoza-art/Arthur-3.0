@@ -129,21 +129,22 @@ class CapSolverImageWithTwoCaptchaFallback {
     async solve(imageBase64) {
         const capKey = process.env.CAPSOLVER_API_KEY?.trim();
         const twoKey = process.env.TWOCAPTCHA_API_KEY?.trim();
-        if (capKey) {
+        // Prefer 2captcha (human solvers) first; CapSolver only as fallback.
+        if (twoKey) {
             try {
-                return await new CapSolverImageSolver(capKey).solve(imageBase64);
+                return await new TwoCaptchaImageSolver(twoKey).solve(imageBase64);
             }
             catch (e) {
                 const msg = e instanceof Error ? e.message : String(e);
-                console.warn('[CEJ] CapSolver image captcha failed:', msg);
-                if (!twoKey)
+                console.warn('[CEJ] 2captcha image captcha failed:', msg);
+                if (!capKey)
                     throw e;
-                console.log('[CEJ] Image captcha: falling back to 2captcha');
-                return await new TwoCaptchaImageSolver(twoKey).solve(imageBase64);
+                console.log('[CEJ] Image captcha: falling back to CapSolver');
+                return await new CapSolverImageSolver(capKey).solve(imageBase64);
             }
         }
-        if (twoKey)
-            return await new TwoCaptchaImageSolver(twoKey).solve(imageBase64);
+        if (capKey)
+            return await new CapSolverImageSolver(capKey).solve(imageBase64);
         throw new Error('No CAPTCHA provider configured. Set CAPSOLVER_API_KEY (CEJ) or TWOCAPTCHA_API_KEY as fallback.');
     }
 }
@@ -184,42 +185,11 @@ async function solveImageCaptchaFromDom(page, baseResult) {
     }, { timeout: 10000 }).catch(() => { });
     await imgEl.scrollIntoViewIfNeeded().catch(() => { });
     await page.waitForTimeout(250);
-    // Obtener la URL actual del captcha (puede tener timestamp para cache-bust)
-    const captchaSrc = await page.evaluate(() => {
-        const img = document.getElementById('captcha_image');
-        return img?.src || '';
-    }).catch(() => '');
-    // Descargar la imagen directamente via fetch usando cookies de la sesión actual.
-    let b64 = await page.evaluate(async (src) => {
-        try {
-            if (!src)
-                return '';
-            const resp = await fetch(src, { credentials: 'same-origin' });
-            if (!resp.ok)
-                return '';
-            const blob = await resp.blob();
-            return await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const dataUrl = reader.result;
-                    const base64 = String(dataUrl || '').split(',')[1] || '';
-                    resolve(base64);
-                };
-                reader.onerror = () => resolve('');
-                reader.readAsDataURL(blob);
-            });
-        }
-        catch (e) {
-            return '';
-        }
-    }, captchaSrc);
-    if (!b64) {
-        console.warn('[CEJ] Captcha fetch failed, falling back to PNG screenshot');
-        const imgBuffer = await imgEl.screenshot({ type: 'png' }).catch(() => Buffer.alloc(0));
-        if (!imgBuffer.length || imgBuffer.length < 200)
-            return '';
-        b64 = imgBuffer.toString('base64');
-    }
+    // Screenshot PNG (lossless) → base64 for the solver.
+    const imgBuffer = await imgEl.screenshot({ type: 'png' }).catch(() => Buffer.alloc(0));
+    if (!imgBuffer.length || imgBuffer.length < 200)
+        return '';
+    const b64 = imgBuffer.toString('base64');
     const solver = getImageCaptchaSolver();
     const code = await solver.solve(b64);
     baseResult.captchaSolved = !!code;
