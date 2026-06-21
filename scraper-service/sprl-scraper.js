@@ -55,11 +55,10 @@ function parseProxy(proxyUrl) {
 
 /**
  * Launch options for SPRL scraping.
- * Proxy credentials are NOT passed here — they go via context.setExtraHTTPHeaders
- * with Proxy-Authorization to avoid ERR_PROXY_AUTH_UNSUPPORTED on HTTPS.
+ * SPRL no requiere proxy peruano — se accede directamente.
  */
 function sprlLaunchOptions() {
-  const opts = {
+  return {
     headless: true,
     args: [
       '--no-sandbox',
@@ -68,17 +67,6 @@ function sprlLaunchOptions() {
       '--ignore-certificate-errors',
     ],
   }
-  const proxy = parseProxy(process.env.PROXY_URL)
-  if (proxy) {
-    // Pass server AND credentials — Playwright's launch-level proxy auth
-    // works for HTTPS when set this way (context-level is what breaks)
-    opts.proxy = {
-      server: proxy.server,
-      username: proxy.username,
-      password: proxy.password,
-    }
-  }
-  return opts
 }
 
 async function loginSPRL(username, password) {
