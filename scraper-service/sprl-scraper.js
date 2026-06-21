@@ -2,7 +2,6 @@
 
 const { chromium } = require('playwright-extra')
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
-const proxyChain = require('proxy-chain')
 
 let _stealthApplied = false
 function applyStealthOnce() {
@@ -13,53 +12,96 @@ function applyStealthOnce() {
 
 const SPRL_LOGIN_URL = 'https://sprl.sunarp.gob.pe/sprl/ingreso'
 
-function sprlLaunchOptions(anonymizedProxyUrl) {
-  const opts = {
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--ignore-certificate-errors',
-    ],
+function parseProxy(proxyUrl) {
+  if (!proxyUrl) return null
+  try {
+    const match = proxyUrl.match(/^(https?):\/\/([^:]+):([^@]+)@([^:]+):(\d+)$/)
+    if (!match) {
+      console.error('[SPRL] PROXY_URL format not recognized')
+      return null
+    }
+    const [, protocol, rawUser, rawPass, host, port] = match
+    return {
+      server: protocol + '://' + host + ':' + port,
+      username: decodeURIComponent(rawUser),
+      password: decodeURIComponent(rawPass),
+    }
+  } catch (e) {
+    console.error('[SPRL] parseProxy error:', e.message)
+    return null
   }
-  if (anonymizedProxyUrl) {
-    opts.proxy = { server: anonymizedProxyUrl }
+}
+
+function sprlLaunchOptions(proxyServer) {
+  const args = [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--ignore-certificate-errors',
+  ]
+  if (proxyServer) {
+    args.push('--proxy-server=' + proxyServer)
   }
-  return opts
+  return { headless: true, args }
 }
 
 async function loginSPRL(username, password) {
-  applyStealthOnce()
-
   let browser = null
-  let anonymizedProxy = null
 
   try {
-    // Anonymize proxy — strips auth so Chromium can connect without ERR_PROXY_AUTH_UNSUPPORTED
-    const rawProxyUrl = (process.env.PROXY_URL || '').trim()
-    if (rawProxyUrl) {
-      try {
-        anonymizedProxy = await proxyChain.anonymizeProxy(rawProxyUrl)
-        console.log('[SPRL] Anonymized proxy ready:', anonymizedProxy)
-      } catch (e) {
-        console.error('[SPRL] Could not anonymize proxy:', e instanceof Error ? e.message : String(e))
-      }
+    applyStealthOnce()
+
+    const proxy = parseProxy(process.env.PROXY_URL)
+    if (proxy) {
+      console.log('[SPRL] Using proxy:', proxy.server)
     } else {
-      console.log('[SPRL] No PROXY_URL configured — connecting directly')
+      console.log('[SPRL] No proxy configured')
     }
 
-    console.log('[SPRL] Starting login attempt for user:', username)
-    browser = await chromium.launch(sprlLaunchOptions(anonymizedProxy))
+    browser = await chromium.launch(sprlLaunchOptions(proxy ? proxy.server : null))
 
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       viewport: { width: 1280, height: 800 },
       locale: 'es-PE',
       ignoreHTTPSErrors: true,
+      httpCredentials: proxy ? { username: proxy.username, password: proxy.password } : undefined,
     })
 
     const page = await context.newPage()
+
+    // CDP handler for proxy authentication via Fetch domain
+    if (proxy) {
+      const client = await page.context().newCDPSession(page)
+      await client.send('Fetch.enable', {
+        handleAuthRequests: true,
+        patterns: [{ urlPattern: '*' }],
+      })
+      client.on('Fetch.authRequired', async (event) => {
+        try {
+          await client.send('Fetch.continueWithAuth', {
+            requestId: event.requestId,
+            authChallengeResponse: {
+              response: 'ProvideCredentials',
+              username: proxy.username,
+              password: proxy.password,
+            },
+          })
+        } catch (e) {
+          console.error('[SPRL] CDP auth error:', e.message)
+        }
+      })
+      client.on('Fetch.requestPaused', async (event) => {
+        try {
+          await client.send('Fetch.continueRequest', { requestId: event.requestId })
+        } catch (e) {
+          // Ignore — request may already be handled
+        }
+      })
+      console.log('[SPRL] CDP proxy auth handler installed')
+    }
+
+    console.log('[SPRL] Starting login attempt for user:', username)
 
     console.log('[SPRL] Navigating to:', SPRL_LOGIN_URL)
     // Navigate with retry — proxy + HTTPS can be flaky on first attempt
@@ -115,9 +157,6 @@ async function loginSPRL(username, password) {
       await page.screenshot({ path: '/tmp/sprl-login-debug.png', fullPage: true }).catch(() => {})
 
       await browser.close()
-      if (anonymizedProxy) {
-        await proxyChain.closeAnonymizedProxy(anonymizedProxy, true).catch(() => {})
-      }
       return { ok: false, error: 'No se encontró el formulario de login en SPRL. Posible cambio en el portal.' }
     }
 
@@ -128,9 +167,6 @@ async function loginSPRL(username, password) {
     const passwordField = await page.$('input[type="password"]').catch(() => null)
     if (!passwordField) {
       await browser.close()
-      if (anonymizedProxy) {
-        await proxyChain.closeAnonymizedProxy(anonymizedProxy, true).catch(() => {})
-      }
       return { ok: false, error: 'No se encontró el campo de contraseña en SPRL.' }
     }
 
@@ -255,9 +291,6 @@ async function loginSPRL(username, password) {
 
       console.log('[SPRL] Login FAILED:', errorMsg)
       await browser.close()
-      if (anonymizedProxy) {
-        await proxyChain.closeAnonymizedProxy(anonymizedProxy, true).catch(() => {})
-      }
       return { ok: false, error: errorMsg }
     }
 
@@ -265,18 +298,12 @@ async function loginSPRL(username, password) {
       console.log('[SPRL] Login unclear — body snippet:', loginResult.bodySnippet.substring(0, 200))
       await page.screenshot({ path: '/tmp/sprl-login-unclear.png', fullPage: true }).catch(() => {})
       await browser.close()
-      if (anonymizedProxy) {
-        await proxyChain.closeAnonymizedProxy(anonymizedProxy, true).catch(() => {})
-      }
       return { ok: false, error: 'No se pudo confirmar el login en SPRL. Intente nuevamente.' }
     }
 
     console.log('[SPRL] Login SUCCESS — saldo:', loginResult.saldo, 'user:', loginResult.displayName)
 
     await browser.close()
-    if (anonymizedProxy) {
-      await proxyChain.closeAnonymizedProxy(anonymizedProxy, true).catch(() => {})
-    }
 
     return {
       ok: true,
@@ -289,9 +316,6 @@ async function loginSPRL(username, password) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[SPRL] Login error:', msg)
     if (browser) await browser.close().catch(() => {})
-    if (anonymizedProxy) {
-      await proxyChain.closeAnonymizedProxy(anonymizedProxy, true).catch(() => {})
-    }
     return { ok: false, error: 'Error al intentar login en SPRL: ' + msg }
   }
 }
