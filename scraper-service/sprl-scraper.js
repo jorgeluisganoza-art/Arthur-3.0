@@ -12,13 +12,27 @@ function applyStealthOnce() {
 
 const SPRL_LOGIN_URL = 'https://sprl.sunarp.gob.pe/sprl/ingreso'
 
+/**
+ * Parse proxy URL from env and force a fresh session for each SPRL request.
+ * This avoids reusing a sticky session that may be blocked by SUNARP.
+ */
 function parseProxy(proxyUrl) {
   if (!proxyUrl) return null
   try {
     const url = new URL(proxyUrl)
+    // Generate fresh session ID to get a new exit IP each time
+    let username = decodeURIComponent(url.username)
+    // Replace existing session parameter or append one
+    if (username.includes('_session-')) {
+      username = username.replace(/_session-[^_]+/, '_session-sprl' + Date.now())
+    } else {
+      username += '_session-sprl' + Date.now()
+    }
+    // Remove lifetime to avoid stale sessions
+    username = username.replace(/_lifetime-[^_]+/, '_lifetime-5m')
     return {
       server: url.protocol + '//' + url.hostname + ':' + url.port,
-      username: decodeURIComponent(url.username),
+      username: username,
       password: decodeURIComponent(url.password),
     }
   } catch {
