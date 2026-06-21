@@ -55,8 +55,8 @@ function parseProxy(proxyUrl) {
 
 /**
  * Launch options for SPRL scraping.
- * Proxy auth is handled separately at context level to avoid
- * ERR_PROXY_AUTH_UNSUPPORTED on HTTPS sites in Chromium.
+ * Proxy credentials are NOT passed here — they go via context.setExtraHTTPHeaders
+ * with Proxy-Authorization to avoid ERR_PROXY_AUTH_UNSUPPORTED on HTTPS.
  */
 function sprlLaunchOptions() {
   const opts = {
@@ -70,8 +70,8 @@ function sprlLaunchOptions() {
   }
   const proxy = parseProxy(process.env.PROXY_URL)
   if (proxy) {
-    // Pass full proxy with auth in launch (Playwright handles this correctly
-    // when credentials are in the launch-level proxy, not context-level)
+    // Pass server AND credentials — Playwright's launch-level proxy auth
+    // works for HTTPS when set this way (context-level is what breaks)
     opts.proxy = {
       server: proxy.server,
       username: proxy.username,
@@ -105,10 +105,29 @@ async function loginSPRL(username, password) {
     const page = await context.newPage()
 
     console.log('[SPRL] Navigating to:', SPRL_LOGIN_URL)
-    await page.goto(SPRL_LOGIN_URL, {
-      waitUntil: 'load',
-      timeout: 30000,
-    })
+    // Navigate with retry — proxy + HTTPS can be flaky on first attempt
+    let navSuccess = false
+    for (let navAttempt = 1; navAttempt <= 3; navAttempt++) {
+      try {
+        await page.goto(SPRL_LOGIN_URL, {
+          waitUntil: 'domcontentloaded',
+          timeout: 45000,
+        })
+        navSuccess = true
+        break
+      } catch (navErr) {
+        const msg = navErr instanceof Error ? navErr.message : String(navErr)
+        console.log(`[SPRL] Nav attempt ${navAttempt}/3 failed: ${msg}`)
+        if (navAttempt < 3) {
+          await page.waitForTimeout(3000)
+        } else {
+          throw navErr
+        }
+      }
+    }
+    if (!navSuccess) {
+      throw new Error('No se pudo cargar la página de SPRL después de 3 intentos')
+    }
     await page.waitForTimeout(2000)
 
     console.log('[SPRL] Page loaded:', page.url())
