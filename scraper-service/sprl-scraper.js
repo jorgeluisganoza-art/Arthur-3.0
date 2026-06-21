@@ -53,6 +53,11 @@ function parseProxy(proxyUrl) {
   }
 }
 
+/**
+ * Launch options for SPRL scraping.
+ * Proxy auth is handled separately at context level to avoid
+ * ERR_PROXY_AUTH_UNSUPPORTED on HTTPS sites in Chromium.
+ */
 function sprlLaunchOptions() {
   const opts = {
     headless: true,
@@ -64,12 +69,26 @@ function sprlLaunchOptions() {
     ],
   }
   const proxy = parseProxy(process.env.PROXY_URL)
-  if (proxy) opts.proxy = proxy
+  if (proxy) {
+    // Pass full proxy with auth in launch (Playwright handles this correctly
+    // when credentials are in the launch-level proxy, not context-level)
+    opts.proxy = {
+      server: proxy.server,
+      username: proxy.username,
+      password: proxy.password,
+    }
+  }
   return opts
 }
 
 async function loginSPRL(username, password) {
   applyStealthOnce()
+
+  // Diagnostic: log which proxy config is being used
+  const proxyCheck = parseProxy(process.env.PROXY_URL)
+  console.log('[SPRL] Proxy server:', proxyCheck ? proxyCheck.server : 'NONE')
+  console.log('[SPRL] Proxy has auth:', proxyCheck ? !!(proxyCheck.username && proxyCheck.password) : false)
+
   let browser = null
 
   try {
