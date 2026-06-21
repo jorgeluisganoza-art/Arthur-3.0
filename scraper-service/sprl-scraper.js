@@ -21,13 +21,12 @@ function parseProxy(proxyUrl) {
       return null
     }
     const [, protocol, rawUser, rawPass, host, port] = match
-    const username = decodeURIComponent(rawUser)
-    const password = decodeURIComponent(rawPass)
-    console.log('[SPRL] Proxy configured:', host + ':' + port, 'protocol:', protocol)
     return {
-      server: protocol + '://' + host + ':' + port,
-      username,
-      password,
+      protocol,
+      host,
+      port,
+      username: decodeURIComponent(rawUser),
+      password: decodeURIComponent(rawPass),
     }
   } catch (e) {
     console.error('[SPRL] parseProxy error:', e instanceof Error ? e.message : String(e))
@@ -35,7 +34,37 @@ function parseProxy(proxyUrl) {
   }
 }
 
-function sprlLaunchOptions() {
+/**
+ * Start a local microsocks tunnel that forwards to IPRoyal with auth.
+ * Chromium connects to localhost:localPort (no auth needed).
+ */
+async function startProxyTunnel(proxy) {
+  const { spawn } = require('child_process')
+  const localPort = 1080 + Math.floor(Math.random() * 100)
+
+  return new Promise((resolve, reject) => {
+    const proc = spawn('microsocks', [
+      '-i', '127.0.0.1',
+      '-p', String(localPort),
+      '-u', proxy.username,
+      '-P', proxy.password,
+      '-b', proxy.host + ':' + proxy.port,
+    ])
+
+    proc.on('error', (err) => {
+      console.error('[SPRL] microsocks error:', err.message)
+      reject(err)
+    })
+
+    // Give microsocks 500ms to start
+    setTimeout(() => {
+      console.log('[SPRL] Proxy tunnel started on localhost:' + localPort)
+      resolve({ proc, localPort })
+    }, 500)
+  })
+}
+
+function sprlLaunchOptions(localProxyPort) {
   const opts = {
     headless: true,
     args: [
@@ -45,13 +74,8 @@ function sprlLaunchOptions() {
       '--ignore-certificate-errors',
     ],
   }
-  const proxy = parseProxy(process.env.PROXY_URL)
-  if (proxy) {
-    opts.proxy = {
-      server: proxy.server,
-      username: proxy.username,
-      password: proxy.password,
-    }
+  if (localProxyPort) {
+    opts.proxy = { server: 'socks5://127.0.0.1:' + localProxyPort }
   }
   return opts
 }
@@ -59,16 +83,25 @@ function sprlLaunchOptions() {
 async function loginSPRL(username, password) {
   applyStealthOnce()
 
-  // Diagnostic: log which proxy config is being used
-  const proxyCheck = parseProxy(process.env.PROXY_URL)
-  console.log('[SPRL] Proxy server:', proxyCheck ? proxyCheck.server : 'NONE')
-  console.log('[SPRL] Proxy has auth:', proxyCheck ? !!(proxyCheck.username && proxyCheck.password) : false)
+  // Start proxy tunnel if proxy is configured
+  let tunnel = null
+  let localProxyPort = null
+  const proxyConfig = parseProxy(process.env.PROXY_URL)
+  if (proxyConfig) {
+    try {
+      tunnel = await startProxyTunnel(proxyConfig)
+      localProxyPort = tunnel.localPort
+      console.log('[SPRL] Proxy tunnel ready on port:', localProxyPort)
+    } catch (e) {
+      console.error('[SPRL] Could not start proxy tunnel:', e.message)
+    }
+  }
 
   let browser = null
 
   try {
     console.log('[SPRL] Starting login attempt for user:', username)
-    browser = await chromium.launch(sprlLaunchOptions())
+    browser = await chromium.launch(sprlLaunchOptions(localProxyPort))
 
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -133,6 +166,7 @@ async function loginSPRL(username, password) {
       await page.screenshot({ path: '/tmp/sprl-login-debug.png', fullPage: true }).catch(() => {})
 
       await browser.close()
+      if (tunnel) tunnel.proc.kill()
       return { ok: false, error: 'No se encontró el formulario de login en SPRL. Posible cambio en el portal.' }
     }
 
@@ -143,6 +177,7 @@ async function loginSPRL(username, password) {
     const passwordField = await page.$('input[type="password"]').catch(() => null)
     if (!passwordField) {
       await browser.close()
+      if (tunnel) tunnel.proc.kill()
       return { ok: false, error: 'No se encontró el campo de contraseña en SPRL.' }
     }
 
@@ -267,6 +302,7 @@ async function loginSPRL(username, password) {
 
       console.log('[SPRL] Login FAILED:', errorMsg)
       await browser.close()
+      if (tunnel) tunnel.proc.kill()
       return { ok: false, error: errorMsg }
     }
 
@@ -274,12 +310,14 @@ async function loginSPRL(username, password) {
       console.log('[SPRL] Login unclear — body snippet:', loginResult.bodySnippet.substring(0, 200))
       await page.screenshot({ path: '/tmp/sprl-login-unclear.png', fullPage: true }).catch(() => {})
       await browser.close()
+      if (tunnel) tunnel.proc.kill()
       return { ok: false, error: 'No se pudo confirmar el login en SPRL. Intente nuevamente.' }
     }
 
     console.log('[SPRL] Login SUCCESS — saldo:', loginResult.saldo, 'user:', loginResult.displayName)
 
     await browser.close()
+    if (tunnel) tunnel.proc.kill()
 
     return {
       ok: true,
@@ -292,6 +330,7 @@ async function loginSPRL(username, password) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[SPRL] Login error:', msg)
     if (browser) await browser.close().catch(() => {})
+    if (tunnel) tunnel.proc.kill()
     return { ok: false, error: 'Error al intentar login en SPRL: ' + msg }
   }
 }
