@@ -12,40 +12,22 @@ function applyStealthOnce() {
 
 const SPRL_LOGIN_URL = 'https://sprl.sunarp.gob.pe/sprl/ingreso'
 
-/**
- * Parse proxy URL from env and force a fresh session for each SPRL request.
- * IPRoyal format: http://USERNAME:PASSWORD@host:port
- * where USERNAME contains _country-pe_city-lima_session-XXX_lifetime-XXX
- */
 function parseProxy(proxyUrl) {
   if (!proxyUrl) return null
   try {
-    // Manual parse to avoid URL() mangling the username's underscores/params
-    // Format: protocol://user:pass@host:port
-    const match = proxyUrl.match(/^(https?):\/\/([^:]+):([^@]+)@([^:]+):(\d+)$/)
+    const match = proxyUrl.match(/^(https?|socks5):\/\/([^:]+):([^@]+)@([^:]+):(\d+)$/)
     if (!match) {
-      console.error('[SPRL] PROXY_URL format not recognized')
+      console.error('[SPRL] PROXY_URL format not recognized:', proxyUrl.substring(0, 30))
       return null
     }
-
     const [, protocol, rawUser, rawPass, host, port] = match
-
-    let username = decodeURIComponent(rawUser)
+    const username = decodeURIComponent(rawUser)
     const password = decodeURIComponent(rawPass)
-
-    // Fresh session each time to get a new exit IP
-    if (username.includes('_session-')) {
-      username = username.replace(/_session-[^_]+/, '_session-sprl' + Date.now())
-    } else {
-      username += '_session-sprl' + Date.now()
-    }
-
-    console.log('[SPRL] Proxy configured:', host + ':' + port, 'user prefix:', username.substring(0, 20))
-
+    console.log('[SPRL] Proxy configured:', host + ':' + port, 'protocol:', protocol)
     return {
       server: protocol + '://' + host + ':' + port,
-      username: username,
-      password: password,
+      username,
+      password,
     }
   } catch (e) {
     console.error('[SPRL] parseProxy error:', e instanceof Error ? e.message : String(e))
