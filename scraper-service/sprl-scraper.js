@@ -53,12 +53,8 @@ function parseProxy(proxyUrl) {
   }
 }
 
-/**
- * Launch options for SPRL scraping.
- * SPRL no requiere proxy peruano — se accede directamente.
- */
 function sprlLaunchOptions() {
-  return {
+  const opts = {
     headless: true,
     args: [
       '--no-sandbox',
@@ -67,6 +63,15 @@ function sprlLaunchOptions() {
       '--ignore-certificate-errors',
     ],
   }
+  const proxy = parseProxy(process.env.PROXY_URL)
+  if (proxy) {
+    opts.proxy = {
+      server: proxy.server,
+      username: proxy.username,
+      password: proxy.password,
+    }
+  }
+  return opts
 }
 
 async function loginSPRL(username, password) {
