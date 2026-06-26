@@ -12,8 +12,25 @@ function applyStealthOnce() {
 
 const SPRL_LOGIN_URL = 'https://sprl.sunarp.gob.pe/sprl/ingreso'
 
-function sprlLaunchOptions() {
-  return {
+function parseProxy(proxyUrl) {
+  if (!proxyUrl) return null
+  try {
+    const match = proxyUrl.match(/^(https?):\/\/([^:]+):([^@]+)@([^:]+):(\d+)$/)
+    if (!match) return null
+    const [, protocol, rawUser, rawPass, host, port] = match
+    return {
+      server: protocol + '://' + host + ':' + port,
+      username: decodeURIComponent(rawUser),
+      password: decodeURIComponent(rawPass),
+    }
+  } catch (e) {
+    console.error('[SPRL] parseProxy error:', e.message)
+    return null
+  }
+}
+
+function sprlLaunchOptions(proxy) {
+  const opts = {
     headless: true,
     args: [
       '--no-sandbox',
@@ -22,6 +39,14 @@ function sprlLaunchOptions() {
       '--ignore-certificate-errors',
     ],
   }
+  if (proxy) {
+    opts.proxy = {
+      server: proxy.server,
+      username: proxy.username,
+      password: proxy.password,
+    }
+  }
+  return opts
 }
 
 async function loginSPRL(username, password) {
@@ -29,9 +54,11 @@ async function loginSPRL(username, password) {
 
   try {
     applyStealthOnce()
-    console.log('[SPRL] Launching browser without proxy (direct connection)')
 
-    browser = await chromium.launch(sprlLaunchOptions())
+    const proxy = parseProxy(process.env.PROXY_URL)
+    console.log('[SPRL] Proxy:', proxy ? proxy.server : 'none (direct)')
+
+    browser = await chromium.launch(sprlLaunchOptions(proxy))
 
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
